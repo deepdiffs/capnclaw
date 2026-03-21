@@ -78,6 +78,16 @@ npm run container:test         # Test container with a prompt
 npm run container:push-runner  # Clear cached agent-runner source for all groups
 ```
 
+What to run after making changes:
+
+| What changed | Command | Why |
+|---|---|---|
+| Host code (`src/`) | `npm run deploy` | Compiles TS + restarts service |
+| Agent runner (`container/agent-runner/src/`) | `npm run container:push-runner` | Clears cached source; fresh copy mounted on next container spawn |
+| Both | `npm run container:push-runner && npm run deploy` | |
+| Container Dockerfile or dependencies | `npm run container:build` | Need a new image |
+| Container Dockerfile + stale cache | `npm run container:build:clean` | Prunes buildkit then rebuilds |
+
 If running `npm run dev` while the service is active, stop the service first:
 ```bash
 npm run svc stop && npm run dev
