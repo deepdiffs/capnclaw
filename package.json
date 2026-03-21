@@ -16,7 +16,16 @@
     "setup": "tsx setup/index.ts",
     "auth": "tsx src/whatsapp-auth.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "deploy": "npm run build && ./scripts/svc.sh restart",
+    "svc": "./scripts/svc.sh",
+    "svc:logs": "tail -f logs/nanoclaw.log",
+    "svc:errors": "tail -f logs/nanoclaw.error.log",
+    "container:build": "./container/build.sh",
+    "container:build:clean": "docker builder prune -f && ./container/build.sh",
+    "container:test": "./scripts/test-container.sh",
+    "container:push-runner": "./scripts/push-runner.sh"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",

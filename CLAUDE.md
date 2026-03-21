@@ -52,22 +52,37 @@ Before creating a PR, adding a skill, or preparing any contribution, you MUST re
 Run commands directly—don't tell the user to run them.
 
 ```bash
-npm run dev          # Run with hot reload
-npm run build        # Compile TypeScript
-./container/build.sh # Rebuild agent container
+npm run dev              # Hot-reload dev mode
+npm run build            # Compile TypeScript
+npm run lint             # Typecheck (tsc --noEmit)
+npm test                 # Run all tests
+npm run test:watch       # Tests in watch mode
+npm run deploy           # Build + restart service
 ```
 
 Service management:
 ```bash
-# macOS (launchd)
-launchctl load ~/Library/LaunchAgents/com.nanoclaw.plist
-launchctl unload ~/Library/LaunchAgents/com.nanoclaw.plist
-launchctl kickstart -k gui/$(id -u)/com.nanoclaw  # restart
+npm run svc start        # Start the background service
+npm run svc stop         # Stop the background service
+npm run svc restart      # Restart the background service
+npm run svc status       # Show service status
+npm run svc:logs         # Tail the main log
+npm run svc:errors       # Tail the error log
+```
 
-# Linux (systemd)
-systemctl --user start nanoclaw
-systemctl --user stop nanoclaw
-systemctl --user restart nanoclaw
+Container management:
+```bash
+npm run container:build        # Rebuild agent container image
+npm run container:build:clean  # Prune cache + rebuild (for stale COPY layers)
+npm run container:test         # Test container with a prompt
+npm run container:push-runner  # Clear cached agent-runner source for all groups
+```
+
+If running `npm run dev` while the service is active, stop the service first:
+```bash
+npm run svc stop && npm run dev
+# When done (ctrl-c), restart the service:
+npm run svc start
 ```
 
 ## Troubleshooting
@@ -76,4 +91,4 @@ systemctl --user restart nanoclaw
 
 ## Container Build Cache
 
-The container buildkit caches the build context aggressively. `--no-cache` alone does NOT invalidate COPY steps — the builder's volume retains stale files. To force a truly clean rebuild, prune the builder then re-run `./container/build.sh`.
+The container buildkit caches the build context aggressively. `--no-cache` alone does NOT invalidate COPY steps — the builder's volume retains stale files. Use `npm run container:build:clean` to prune the builder and rebuild from scratch.

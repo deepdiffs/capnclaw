@@ -16,7 +16,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { query, HookCallback, PreCompactHookInput } from '@anthropic-ai/claude-agent-sdk';
+import { query, HookCallback, HookInput, PreCompactHookInput } from '@anthropic-ai/claude-agent-sdk';
 import { fileURLToPath } from 'url';
 
 interface ContainerInput {
@@ -143,7 +143,7 @@ function getSessionSummary(sessionId: string, transcriptPath: string): string | 
  * Archive the full transcript to conversations/ before compaction.
  */
 function createPreCompactHook(assistantName?: string): HookCallback {
-  return async (input, _toolUseId, _context) => {
+  return async (input: HookInput, _toolUseId: string | undefined, _options: { signal: AbortSignal }) => {
     const preCompact = input as PreCompactHookInput;
     const transcriptPath = preCompact.transcript_path;
     const sessionId = preCompact.session_id;
