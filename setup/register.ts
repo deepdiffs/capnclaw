@@ -33,7 +33,7 @@ function parseArgs(args: string[]): RegisterArgs {
     channel: 'whatsapp', // backward-compat: pre-refactor installs omit --channel
     requiresTrigger: true,
     isMain: false,
-    assistantName: 'Andy',
+    assistantName: 'McClaw',
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -60,7 +60,7 @@ function parseArgs(args: string[]): RegisterArgs {
         result.isMain = true;
         break;
       case '--assistant-name':
-        result.assistantName = args[++i] || 'Andy';
+        result.assistantName = args[++i] || 'McClaw';
         break;
     }
   }
