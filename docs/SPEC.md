@@ -25,50 +25,50 @@ A personal Claude assistant with multi-channel support, persistent memory per co
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│                        HOST (macOS / Linux)                           │
-│                     (Main Node.js Process)                            │
+│                        HOST (macOS / Linux)                          │
+│                     (Main Node.js Process)                           │
 ├──────────────────────────────────────────────────────────────────────┤
-│                                                                       │
+│                                                                      │
 │  ┌──────────────────┐                  ┌────────────────────┐        │
 │  │ Channels         │─────────────────▶│   SQLite Database  │        │
-│  │ (self-register   │◀────────────────│   (messages.db)    │        │
+│  │ (self-register   │◀─────────────────│   (messages.db)    │        │
 │  │  at startup)     │  store/send      └─────────┬──────────┘        │
 │  └──────────────────┘                            │                   │
-│                                                   │                   │
-│         ┌─────────────────────────────────────────┘                   │
-│         │                                                             │
-│         ▼                                                             │
+│                                                  │                   │
+│         ┌────────────────────────────────────────┘                   │
+│         │                                                            │
+│         ▼                                                            │
 │  ┌──────────────────┐    ┌──────────────────┐    ┌───────────────┐   │
 │  │  Message Loop    │    │  Scheduler Loop  │    │  IPC Watcher  │   │
 │  │  (polls SQLite)  │    │  (checks tasks)  │    │  (file-based) │   │
 │  └────────┬─────────┘    └────────┬─────────┘    └───────────────┘   │
-│           │                       │                                   │
-│           └───────────┬───────────┘                                   │
-│                       │ spawns container                              │
-│                       ▼                                               │
+│           │                       │                                  │
+│           └───────────┬───────────┘                                  │
+│                       │ spawns container                             │
+│                       ▼                                              │
 ├──────────────────────────────────────────────────────────────────────┤
-│                     CONTAINER (Linux VM)                               │
+│                     CONTAINER (Linux VM)                             │
 ├──────────────────────────────────────────────────────────────────────┤
 │  ┌──────────────────────────────────────────────────────────────┐    │
-│  │                    AGENT RUNNER                               │    │
-│  │                                                                │    │
-│  │  Working directory: /workspace/group (mounted from host)       │    │
-│  │  Volume mounts:                                                │    │
-│  │    • groups/{name}/ → /workspace/group                         │    │
-│  │    • groups/global/ → /workspace/global/ (non-main only)       │    │
-│  │    • data/sessions/{group}/.claude/ → /home/node/.claude/      │    │
-│  │    • Additional dirs → /workspace/extra/*                      │    │
-│  │                                                                │    │
-│  │  Tools (all groups):                                           │    │
-│  │    • Bash (safe - sandboxed in container!)                     │    │
-│  │    • Read, Write, Edit, Glob, Grep (file operations)           │    │
-│  │    • WebSearch, WebFetch (internet access)                     │    │
-│  │    • agent-browser (browser automation)                        │    │
-│  │    • mcp__nanoclaw__* (scheduler tools via IPC)                │    │
-│  │                                                                │    │
+│  │                    AGENT RUNNER                              │    │
+│  │                                                              │    │
+│  │  Working directory: /workspace/group (mounted from host)     │    │
+│  │  Volume mounts:                                              │    │
+│  │    • groups/{name}/ → /workspace/group                       │    │
+│  │    • groups/global/ → /workspace/global/ (non-main only)     │    │
+│  │    • data/sessions/{group}/.claude/ → /home/node/.claude/    │    │
+│  │    • Additional dirs → /workspace/extra/*                    │    │
+│  │                                                              │    │
+│  │  Tools (all groups):                                         │    │
+│  │    • Bash (safe - sandboxed in container!)                   │    │
+│  │    • Read, Write, Edit, Glob, Grep (file operations)         │    │
+│  │    • WebSearch, WebFetch (internet access)                   │    │
+│  │    • agent-browser (browser automation)                      │    │
+│  │    • mcp__nanoclaw__* (scheduler tools via IPC)              │    │
+│  │                                                              │    │
 │  └──────────────────────────────────────────────────────────────┘    │
-│                                                                       │
-└───────────────────────────────────────────────────────────────────────┘
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Technology Stack
@@ -296,7 +296,7 @@ nanoclaw/
 │
 ├── groups/
 │   ├── CLAUDE.md                  # Global memory (all groups read this)
-│   ├── {channel}_main/             # Main control channel (e.g., whatsapp_main/)
+│   ├── {channel}_main/            # Main control channel (e.g., whatsapp_main/)
 │   │   ├── CLAUDE.md              # Main channel memory
 │   │   └── logs/                  # Task execution logs
 │   └── {channel}_{group-name}/    # Per-group folders (created on registration)
