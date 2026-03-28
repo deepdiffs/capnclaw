@@ -3,7 +3,7 @@
  * Used by all X scripts
  */
 
-import { chromium, BrowserContext, Page } from 'playwright';
+import { chromium, type BrowserContext, type Page } from 'playwright';
 import fs from 'fs';
 import path from 'path';
 import { config } from './config.js';
@@ -52,6 +52,20 @@ export function cleanupLockFiles(): void {
       try { fs.unlinkSync(lockPath); } catch {}
     }
   }
+}
+
+/**
+ * Check if logged in to X. Returns error result if not, null if logged in.
+ */
+export async function checkLogin(page: Page): Promise<ScriptResult | null> {
+  const isLoggedIn = await page.locator('[data-testid="SideNav_AccountSwitcher_Button"]').isVisible().catch(() => false);
+  if (!isLoggedIn) {
+    const onLoginPage = await page.locator('input[autocomplete="username"]').isVisible().catch(() => false);
+    if (onLoginPage) {
+      return { success: false, message: 'X login expired. Run /x-integration to re-authenticate.' };
+    }
+  }
+  return null;
 }
 
 /**

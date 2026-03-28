@@ -4,6 +4,7 @@ Changes made in this fork that differ from upstream NanoClaw.
 
 ## 2026-03-28
 
+- **X (Twitter) integration**: Added browser automation for X via IPC — post, like, reply, retweet, quote. Host spawns Playwright scripts against user's Chrome; container agents access via MCP tools. Main group only. Added playwright + dotenv-cli deps, updated build.sh/Dockerfile for project-root build context, added .dockerignore
 - **Container debug scripts**: Added `container:logs` and `container:exec` npm scripts to tail active container logs and shell into the running container
 - **Fix container "I have no name!"**: Entrypoint now registers host-mapped UID in `/etc/passwd` so macOS users get a proper username instead of "I have no name!" when exec'ing in
 - **Fix group folder references**: Changed `.gitignore`, `src/db.test.ts`, and migration comment in `src/db.ts` from legacy `groups/main/` to `groups/telegram_main/` — the actual active group after machine migration

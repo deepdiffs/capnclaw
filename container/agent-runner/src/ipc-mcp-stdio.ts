@@ -333,6 +333,193 @@ Use available_groups.json to find the JID for a group. The folder name must be c
   },
 );
 
+// --- X Integration Tools (main group only) ---
+
+const X_RESULTS_DIR = path.join(IPC_DIR, 'x_results');
+
+async function waitForXResult(requestId: string, maxWait = 60000): Promise<{ success: boolean; message: string }> {
+  const resultFile = path.join(X_RESULTS_DIR, `${requestId}.json`);
+  const pollInterval = 1000;
+  let elapsed = 0;
+
+  while (elapsed < maxWait) {
+    try {
+      const result = JSON.parse(fs.readFileSync(resultFile, 'utf-8'));
+      fs.unlinkSync(resultFile);
+      return result;
+    } catch (err: unknown) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        return { success: false, message: `Failed to read result: ${err}` };
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+    elapsed += pollInterval;
+  }
+
+  return { success: false, message: 'Request timed out' };
+}
+
+// TEMPORARILY DISABLED: write actions (x_post, x_like, x_reply, x_retweet, x_quote)
+// Uncomment the blocks below to re-enable.
+
+/* server.tool(
+  'x_post',
+  `Post a tweet to X (Twitter). Main group only.
+The host machine will execute the browser automation to post the tweet.
+Make sure the content is appropriate and within X's character limit (280 chars for text).`,
+  {
+    content: z.string().max(280).describe('The tweet content to post (max 280 characters)'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only the main group can post tweets.' }], isError: true };
+    }
+
+    const requestId = `xpost-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    writeIpcFile(TASKS_DIR, {
+      type: 'x_post',
+      requestId,
+      content: args.content,
+      groupFolder,
+      timestamp: new Date().toISOString(),
+    });
+
+    const result = await waitForXResult(requestId);
+    return { content: [{ type: 'text' as const, text: result.message }], isError: !result.success };
+  },
+);
+
+server.tool(
+  'x_like',
+  'Like a tweet on X (Twitter). Main group only. Provide the tweet URL or tweet ID.',
+  {
+    tweet_url: z.string().describe('The tweet URL (e.g., https://x.com/user/status/123) or tweet ID'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only the main group can interact with X.' }], isError: true };
+    }
+
+    const requestId = `xlike-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    writeIpcFile(TASKS_DIR, {
+      type: 'x_like',
+      requestId,
+      tweetUrl: args.tweet_url,
+      groupFolder,
+      timestamp: new Date().toISOString(),
+    });
+
+    const result = await waitForXResult(requestId);
+    return { content: [{ type: 'text' as const, text: result.message }], isError: !result.success };
+  },
+);
+
+server.tool(
+  'x_reply',
+  'Reply to a tweet on X (Twitter). Main group only. Provide the tweet URL and your reply content.',
+  {
+    tweet_url: z.string().describe('The tweet URL (e.g., https://x.com/user/status/123) or tweet ID'),
+    content: z.string().max(280).describe('The reply content (max 280 characters)'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only the main group can interact with X.' }], isError: true };
+    }
+
+    const requestId = `xreply-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    writeIpcFile(TASKS_DIR, {
+      type: 'x_reply',
+      requestId,
+      tweetUrl: args.tweet_url,
+      content: args.content,
+      groupFolder,
+      timestamp: new Date().toISOString(),
+    });
+
+    const result = await waitForXResult(requestId);
+    return { content: [{ type: 'text' as const, text: result.message }], isError: !result.success };
+  },
+);
+
+server.tool(
+  'x_retweet',
+  'Retweet a tweet on X (Twitter). Main group only. Provide the tweet URL to retweet.',
+  {
+    tweet_url: z.string().describe('The tweet URL (e.g., https://x.com/user/status/123) or tweet ID'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only the main group can interact with X.' }], isError: true };
+    }
+
+    const requestId = `xretweet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    writeIpcFile(TASKS_DIR, {
+      type: 'x_retweet',
+      requestId,
+      tweetUrl: args.tweet_url,
+      groupFolder,
+      timestamp: new Date().toISOString(),
+    });
+
+    const result = await waitForXResult(requestId);
+    return { content: [{ type: 'text' as const, text: result.message }], isError: !result.success };
+  },
+); */
+
+server.tool(
+  'x_bookmarks',
+  `Read recent bookmarks from X (Twitter). Main group only.
+Returns bookmarked tweets with author, text, timestamp, and URL.
+Default: 10 most recent bookmarks. Increase count to fetch more (max 100).`,
+  {
+    count: z.number().min(1).max(100).default(10).describe('Number of bookmarks to fetch (default 10, max 100)'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only the main group can interact with X.' }], isError: true };
+    }
+
+    const requestId = `xbookmarks-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    writeIpcFile(TASKS_DIR, {
+      type: 'x_bookmarks',
+      requestId,
+      count: args.count,
+      groupFolder,
+      timestamp: new Date().toISOString(),
+    });
+
+    const result = await waitForXResult(requestId, 120000); // longer timeout for scrolling
+    return { content: [{ type: 'text' as const, text: result.message }], isError: !result.success };
+  },
+);
+
+/* server.tool(
+  'x_quote',
+  'Quote tweet on X (Twitter). Main group only. Retweet with your own comment added.',
+  {
+    tweet_url: z.string().describe('The tweet URL (e.g., https://x.com/user/status/123) or tweet ID'),
+    comment: z.string().max(280).describe('Your comment for the quote tweet (max 280 characters)'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only the main group can interact with X.' }], isError: true };
+    }
+
+    const requestId = `xquote-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    writeIpcFile(TASKS_DIR, {
+      type: 'x_quote',
+      requestId,
+      tweetUrl: args.tweet_url,
+      comment: args.comment,
+      groupFolder,
+      timestamp: new Date().toISOString(),
+    });
+
+    const result = await waitForXResult(requestId);
+    return { content: [{ type: 'text' as const, text: result.message }], isError: !result.success };
+  },
+); */
+
 // Start the stdio transport
 const transport = new StdioServerTransport();
 await server.connect(transport);

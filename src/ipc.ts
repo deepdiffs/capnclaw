@@ -3,6 +3,7 @@ import path from 'path';
 
 import { CronExpressionParser } from 'cron-parser';
 
+import { spawn } from 'child_process';
 import { DATA_DIR, IPC_POLL_INTERVAL, TIMEZONE } from './config.js';
 import { sendPoolMessage } from './channels/telegram.js';
 import { AvailableGroup } from './container-runner.js';
@@ -185,6 +186,8 @@ export async function processTaskIpc(
     trigger?: string;
     requiresTrigger?: boolean;
     containerConfig?: RegisteredGroup['containerConfig'];
+    // For X integration
+    requestId?: string;
   },
   sourceGroup: string, // Verified identity from IPC directory
   isMain: boolean, // Verified from directory path
@@ -468,7 +471,121 @@ export async function processTaskIpc(
       }
       break;
 
-    default:
-      logger.warn({ type: data.type }, 'Unknown IPC task type');
+    default: {
+      if (data.type?.startsWith('x_') && data.requestId) {
+        if (!isMain) {
+          logger.warn(
+            { sourceGroup, type: data.type },
+            'X integration blocked: not main group',
+          );
+          break;
+        }
+
+        const { requestId } = data;
+        const scriptMap: Record<string, string> = {
+          x_post: 'post',
+          x_like: 'like',
+          x_reply: 'reply',
+          x_retweet: 'retweet',
+          x_quote: 'quote',
+          x_bookmarks: 'bookmarks',
+        };
+        const script = scriptMap[data.type];
+        if (script) {
+          logger.info({ type: data.type, requestId }, 'Processing X request');
+          const scriptPath = path.join(
+            process.cwd(),
+            '.claude',
+            'skills',
+            'x-integration',
+            'scripts',
+            `${script}.ts`,
+          );
+          const result = await new Promise<{
+            success: boolean;
+            message: string;
+          }>((resolve) => {
+            const tsxCli = path.join(
+              process.cwd(),
+              'node_modules',
+              'tsx',
+              'dist',
+              'cli.mjs',
+            );
+            const proc = spawn(process.execPath, [tsxCli, scriptPath], {
+              cwd: process.cwd(),
+              env: { ...process.env, NANOCLAW_ROOT: process.cwd() },
+              stdio: ['pipe', 'pipe', 'pipe'],
+            });
+            let stdout = '';
+            let stderr = '';
+            proc.stdout.on('data', (chunk: Buffer) => {
+              stdout += chunk.toString();
+            });
+            proc.stderr.on('data', (chunk: Buffer) => {
+              stderr += chunk.toString();
+            });
+            proc.stdin.write(JSON.stringify(data));
+            proc.stdin.end();
+            const timer = setTimeout(() => {
+              proc.kill('SIGTERM');
+              resolve({ success: false, message: 'Script timed out (120s)' });
+            }, 120000);
+            proc.on('close', (code) => {
+              clearTimeout(timer);
+              if (code !== 0) {
+                const detail = stderr ? `: ${stderr.slice(0, 200)}` : '';
+                resolve({
+                  success: false,
+                  message: `Script exited with code ${code}${detail}`,
+                });
+                return;
+              }
+              try {
+                const lines = stdout.trim().split('\n');
+                resolve(JSON.parse(lines[lines.length - 1]));
+              } catch {
+                resolve({
+                  success: false,
+                  message: `Failed to parse output: ${stdout.slice(0, 200)}`,
+                });
+              }
+            });
+            proc.on('error', (err) => {
+              clearTimeout(timer);
+              resolve({
+                success: false,
+                message: `Failed to spawn: ${err.message}`,
+              });
+            });
+          });
+
+          // Atomic write: temp file then rename (matches writeIpcFile pattern)
+          const resultsDir = path.join(
+            DATA_DIR,
+            'ipc',
+            sourceGroup,
+            'x_results',
+          );
+          fs.mkdirSync(resultsDir, { recursive: true });
+          const resultPath = path.join(resultsDir, `${requestId}.json`);
+          const tmpPath = `${resultPath}.tmp`;
+          fs.writeFileSync(tmpPath, JSON.stringify(result));
+          fs.renameSync(tmpPath, resultPath);
+          if (result.success) {
+            logger.info({ type: data.type, requestId }, 'X request completed');
+          } else {
+            logger.error(
+              { type: data.type, requestId, message: result.message },
+              'X request failed',
+            );
+          }
+        } else {
+          logger.warn({ type: data.type }, 'Unknown X IPC task type');
+        }
+      } else {
+        logger.warn({ type: data.type }, 'Unknown IPC task type');
+      }
+    }
   }
 }
