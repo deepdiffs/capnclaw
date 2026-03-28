@@ -2,6 +2,10 @@
 
 Changes made in this fork that differ from upstream NanoClaw.
 
+## 2026-03-28
+
+- **Rename bot**: Renamed assistant from "McClaw" to "miniclaw" — updated default name in `src/config.ts`, `setup/register.ts`, and `groups/global/CLAUDE.md`
+
 ## 2026-03-21
 
 - **Agent runner log format**: Shortened per-message log line from `[msg #N] type=T` to `[#N][T]` for less noise
