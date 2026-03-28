@@ -4,7 +4,8 @@ Changes made in this fork that differ from upstream NanoClaw.
 
 ## 2026-03-28
 
-- **Agent runner tool logging**: Added PreToolUse, PostToolUse, and PostToolUseFailure hooks that log every tool call to `/workspace/group/tool-log.jsonl` as structured JSONL (timestamp, tool name, id, args/response/error); PostToolUse reads optional `durationSeconds` via narrowing because the SDK types `tool_response` as `unknown`
+- **Agent runner tool logging**: Added PreToolUse, PostToolUse, and PostToolUseFailure hooks that log every tool call to `/workspace/group/tool-log.jsonl` as structured JSONL (timestamp, tool name, id, args/response/error)
+- **Fix tool log duration**: Replaced `toolResponseDurationSeconds` (only worked for WebSearch) with wall-clock timing — pre hook records `Date.now()` per tool_use_id, post hook computes elapsed seconds. Duration now appears on all tool log entries
 - **X (Twitter) integration**: Added browser automation for X via IPC — post, like, reply, retweet, quote. Host spawns Playwright scripts against user's Chrome; container agents access via MCP tools. Main group only. Added playwright + dotenv-cli deps, updated build.sh/Dockerfile for project-root build context, added .dockerignore
 - **Container debug scripts**: Added `container:logs` and `container:exec` npm scripts to tail active container logs and shell into the running container
 - **Fix container "I have no name!"**: Entrypoint now registers host-mapped UID in `/etc/passwd` so macOS users get a proper username instead of "I have no name!" when exec'ing in

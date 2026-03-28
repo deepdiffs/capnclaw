@@ -123,34 +123,41 @@ function logTool(entry: Record<string, unknown>): void {
   fs.appendFileSync(TOOL_LOG_PATH, JSON.stringify({ ts: new Date().toISOString(), ...entry }) + '\n');
 }
 
-/** SDK types tool_response as unknown; durationSeconds appears on some tool outputs. */
-function toolResponseDurationSeconds(toolResponse: unknown): number | undefined {
-  if (typeof toolResponse !== 'object' || toolResponse === null) return undefined;
-  const d = (toolResponse as Record<string, unknown>).durationSeconds;
-  return typeof d === 'number' ? d : undefined;
-}
+const toolStartTimes = new Map<string, number>();
 
 const preToolUseHook: HookCallback = async (input: HookInput) => {
   const { tool_name, tool_use_id, tool_input } = input as PreToolUseHookInput;
+  toolStartTimes.set(tool_use_id, Date.now());
   logTool({ event: 'pre', tool: tool_name, id: tool_use_id, args: tool_input });
   return {};
 };
 
 const postToolUseHook: HookCallback = async (input: HookInput) => {
-  const { tool_name, tool_use_id, tool_response } = input as PostToolUseHookInput;
+  const { tool_name, tool_use_id } = input as PostToolUseHookInput;
+  const startMs = toolStartTimes.get(tool_use_id);
+  toolStartTimes.delete(tool_use_id);
   logTool({
     event: 'post',
     tool: tool_name,
     id: tool_use_id,
     result: 'ok',
-    duration: toolResponseDurationSeconds(tool_response),
+    duration: startMs != null ? +((Date.now() - startMs) / 1000).toFixed(2) : undefined,
   });
   return {};
 };
 
 const postToolUseFailureHook: HookCallback = async (input: HookInput) => {
   const { tool_name, tool_use_id, error } = input as PostToolUseFailureHookInput;
-  logTool({ event: 'post', tool: tool_name, id: tool_use_id, result: 'error', reason: error });
+  const startMs = toolStartTimes.get(tool_use_id);
+  toolStartTimes.delete(tool_use_id);
+  logTool({
+    event: 'post',
+    tool: tool_name,
+    id: tool_use_id,
+    result: 'error',
+    reason: error,
+    duration: startMs != null ? +((Date.now() - startMs) / 1000).toFixed(2) : undefined,
+  });
   return {};
 };
 
