@@ -421,6 +421,8 @@ body {
 
 .call-result-error .call-duration-fill { background: var(--error); }
 .call-result-error .call-tool { outline: 2px solid var(--error); outline-offset: -2px; }
+.call-result-pending .call-duration-fill { background: var(--amber); }
+.call-result-pending .call-tool { outline: 2px solid var(--amber); outline-offset: -2px; }
 
 /* --- Expandable detail --- */
 .call-detail {
@@ -587,10 +589,11 @@ mark {
     <div class="filter-group" id="resultFilters">
       <button class="filter-chip active" data-result="all">All</button>
       <button class="filter-chip" data-result="ok">OK</button>
+      <button class="filter-chip" data-result="pending">Pending</button>
       <button class="filter-chip" data-result="error">Error</button>
     </div>
     <div class="filter-divider"></div>
-    <button class="sort-toggle" id="sortToggle">
+    <button class="sort-toggle desc" id="sortToggle">
       Time <span class="arrow">&#8595;</span>
     </button>
     <span class="result-count" id="resultCount"></span>
@@ -630,7 +633,7 @@ let activeToolFilters = new Set();
 let activeResultFilter = 'all';
 let searchQuery = '';
 let sortBy = 'time';
-let sortDir = 'asc';
+let sortDir = 'desc';
 
 // --- Parse JSONL into paired calls ---
 function parseJSONL(text) {
@@ -832,8 +835,10 @@ function render() {
     const summary = summarize(call);
     const durationPct = call.duration != null ? Math.max(2, (call.duration / maxDuration) * 100) : 0;
     const isError = call.result === 'error';
+    const isPending = call.result === 'pending';
+    const resultClass = isError ? 'call-result-error' : isPending ? 'call-result-pending' : '';
 
-    html += `<div class="call-entry ${isError ? 'call-result-error' : ''}" data-id="${call.id}">
+    html += `<div class="call-entry ${resultClass}" data-id="${call.id}">
       <div class="call-row" onclick="toggleDetail('${call.id}')">
         <span class="call-time">${formatTime(call.ts)}</span>
         <span class="call-tool" style="background:${color.bg};color:${color.fg};border:1px solid ${color.border}">${highlightText(shortName, searchQuery)}</span>
@@ -862,7 +867,7 @@ function render() {
             </div>
             <div class="detail-row">
               <span class="detail-label">Result</span>
-              <span class="detail-value" style="color:${isError ? 'var(--error)' : 'var(--forest)'};font-weight:500">${call.result}</span>
+              <span class="detail-value" style="color:${isError ? 'var(--error)' : isPending ? 'var(--amber)' : 'var(--forest)'};font-weight:500">${call.result}</span>
             </div>
             ${call.duration != null ? `<div class="detail-row">
               <span class="detail-label">Duration</span>
@@ -919,6 +924,7 @@ function updateStats() {
   const totalCalls = allCalls.length;
   const totalDuration = allCalls.reduce((s, c) => s + (c.duration ?? 0), 0);
   const errors = allCalls.filter(c => c.result === 'error').length;
+  const pending = allCalls.filter(c => c.result === 'pending').length;
   const tools = new Set(allCalls.map(c => c.tool)).size;
 
   let timespan = '';
@@ -938,6 +944,7 @@ function updateStats() {
     `<strong>${tools}</strong> tools`,
     `<strong>${totalDuration.toFixed(2)}s</strong> total`,
   ];
+  if (pending > 0) parts.push(`<strong style="color:var(--amber)">${pending}</strong> pending`);
   if (errors > 0) parts.push(`<strong style="color:var(--error)">${errors}</strong> errors`);
   if (timespan) parts.push(timespan);
 
@@ -961,10 +968,10 @@ document.querySelectorAll('#resultFilters .filter-chip').forEach(btn => {
 
 document.getElementById('sortToggle').addEventListener('click', () => {
   const btn = document.getElementById('sortToggle');
-  if (sortBy === 'time' && sortDir === 'asc') {
-    sortDir = 'desc';
-    btn.classList.add('desc');
-  } else if (sortBy === 'time' && sortDir === 'desc') {
+  if (sortBy === 'time' && sortDir === 'desc') {
+    sortDir = 'asc';
+    btn.classList.remove('desc');
+  } else if (sortBy === 'time' && sortDir === 'asc') {
     sortBy = 'duration';
     sortDir = 'desc';
     btn.innerHTML = 'Duration <span class="arrow">&#8595;</span>';
@@ -974,9 +981,9 @@ document.getElementById('sortToggle').addEventListener('click', () => {
     btn.classList.remove('desc');
   } else {
     sortBy = 'time';
-    sortDir = 'asc';
+    sortDir = 'desc';
     btn.innerHTML = 'Time <span class="arrow">&#8595;</span>';
-    btn.classList.remove('desc');
+    btn.classList.add('desc');
   }
   render();
 });
@@ -1035,10 +1042,10 @@ function loadFromText(text) {
   activeResultFilter = 'all';
   searchQuery = '';
   sortBy = 'time';
-  sortDir = 'asc';
+  sortDir = 'desc';
   document.getElementById('search').value = '';
   document.getElementById('sortToggle').innerHTML = 'Time <span class="arrow">&#8595;</span>';
-  document.getElementById('sortToggle').classList.remove('desc');
+  document.getElementById('sortToggle').classList.add('desc');
   document.querySelectorAll('#resultFilters .filter-chip').forEach(b => b.classList.remove('active'));
   document.querySelector('#resultFilters [data-result="all"]').classList.add('active');
   document.getElementById('landing').classList.add('hidden');
