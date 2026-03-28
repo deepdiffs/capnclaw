@@ -16,7 +16,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import { query, HookCallback, HookInput, PreCompactHookInput } from '@anthropic-ai/claude-agent-sdk';
+import { query, HookCallback, HookInput, PreCompactHookInput, PreToolUseHookInput, PostToolUseHookInput, PostToolUseFailureHookInput } from '@anthropic-ai/claude-agent-sdk';
 import { fileURLToPath } from 'url';
 
 interface ContainerInput {
@@ -116,6 +116,43 @@ function writeOutput(output: ContainerOutput): void {
 function log(message: string): void {
   console.error(`[agent-runner] ${message}`);
 }
+
+const TOOL_LOG_PATH = '/workspace/group/tool-log.jsonl';
+
+function logTool(entry: Record<string, unknown>): void {
+  fs.appendFileSync(TOOL_LOG_PATH, JSON.stringify({ ts: new Date().toISOString(), ...entry }) + '\n');
+}
+
+/** SDK types tool_response as unknown; durationSeconds appears on some tool outputs. */
+function toolResponseDurationSeconds(toolResponse: unknown): number | undefined {
+  if (typeof toolResponse !== 'object' || toolResponse === null) return undefined;
+  const d = (toolResponse as Record<string, unknown>).durationSeconds;
+  return typeof d === 'number' ? d : undefined;
+}
+
+const preToolUseHook: HookCallback = async (input: HookInput) => {
+  const { tool_name, tool_use_id, tool_input } = input as PreToolUseHookInput;
+  logTool({ event: 'pre', tool: tool_name, id: tool_use_id, args: tool_input });
+  return {};
+};
+
+const postToolUseHook: HookCallback = async (input: HookInput) => {
+  const { tool_name, tool_use_id, tool_response } = input as PostToolUseHookInput;
+  logTool({
+    event: 'post',
+    tool: tool_name,
+    id: tool_use_id,
+    result: 'ok',
+    duration: toolResponseDurationSeconds(tool_response),
+  });
+  return {};
+};
+
+const postToolUseFailureHook: HookCallback = async (input: HookInput) => {
+  const { tool_name, tool_use_id, error } = input as PostToolUseFailureHookInput;
+  logTool({ event: 'post', tool: tool_name, id: tool_use_id, result: 'error', reason: error });
+  return {};
+};
 
 function getSessionSummary(sessionId: string, transcriptPath: string): string | null {
   const projectDir = path.dirname(transcriptPath);
@@ -425,6 +462,9 @@ async function runQuery(
         },
       },
       hooks: {
+        PreToolUse: [{ hooks: [preToolUseHook] }],
+        PostToolUse: [{ hooks: [postToolUseHook] }],
+        PostToolUseFailure: [{ hooks: [postToolUseFailureHook] }],
         PreCompact: [{ hooks: [createPreCompactHook(containerInput.assistantName)] }],
       },
     }
