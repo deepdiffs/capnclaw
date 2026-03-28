@@ -16,6 +16,7 @@ import {
   IDLE_TIMEOUT,
   TIMEZONE,
 } from './config.js';
+import { readEnvFile } from './env.js';
 import { resolveGroupFolderPath, resolveGroupIpcPath } from './group-folder.js';
 import { logger } from './logger.js';
 import {
@@ -236,6 +237,12 @@ function buildContainerArgs(
     args.push('-e', 'ANTHROPIC_API_KEY=placeholder');
   } else {
     args.push('-e', 'CLAUDE_CODE_OAUTH_TOKEN=placeholder');
+  }
+
+  // Pass Parallel AI API key if available (for MCP servers inside container)
+  const { PARALLEL_API_KEY } = readEnvFile(['PARALLEL_API_KEY']);
+  if (PARALLEL_API_KEY) {
+    args.push('-e', `PARALLEL_API_KEY=${PARALLEL_API_KEY}`);
   }
 
   // Runtime-specific args for host gateway resolution
