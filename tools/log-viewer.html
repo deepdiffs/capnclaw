@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg: #f4efe6;
+  --surface: #faf7f1;
+  --surface-hover: #f0ebe1;
+  --text: #2d2418;
+  --text-secondary: #6b5d4d;
+  --text-tertiary: #9a8d7e;
+  --border: #d8d0c4;
+  --border-light: #e8e2d8;
+
+  --copper: #b85c38;
+  --copper-light: #f0ddd2;
+  --forest: #3d7a52;
+  --forest-light: #d4ead9;
+  --slate: #4e6e8c;
+  --slate-light: #d2dee9;
+  --plum: #7e5a8c;
+  --plum-light: #e4d6ea;
+  --amber: #a07828;
+  --amber-light: #f0e4c8;
+  --clay: #8c6448;
+  --clay-light: #e8d8c8;
+
+  --error: #b5392a;
+  --error-light: #f2d6d2;
+
+  --gauge-fill: #c48a34;
+  --gauge-track: #e6dfd4;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'DM Sans', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+html {
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* --- Drop zone / landing --- */
+.landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  gap: 2rem;
+}
+
+.landing h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2rem, 4vw, 3rem);
+  color: var(--text);
+  letter-spacing: -0.02em;
+  font-variation-settings: 'opsz' 144;
+}
+
+.landing p {
+  color: var(--text-secondary);
+  font-size: 0.93rem;
+  max-width: 32ch;
+  text-align: center;
+}
+
+.dropzone {
+  width: min(480px, 90vw);
+  aspect-ratio: 2.4 / 1;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+}
+
+.dropzone:hover, .dropzone.drag-over {
+  border-color: var(--copper);
+  background: var(--copper-light);
+}
+
+.dropzone-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  transition: background 0.2s, color 0.2s;
+}
+
+.dropzone:hover .dropzone-icon, .dropzone.drag-over .dropzone-icon {
+  background: var(--copper);
+  color: #fff;
+}
+
+.dropzone-label {
+  font-size: 0.93rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.dropzone-hint {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+}
+
+.dropzone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* --- App shell --- */
+.app { display: none; flex-direction: column; min-height: 100vh; }
+.app.active { display: flex; }
+.landing.hidden { display: none; }
+
+/* --- Header --- */
+.header {
+  padding: 1.25rem 2rem 1rem;
+  display: flex;
+  align-items: baseline;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+}
+
+.header h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+  font-variation-settings: 'opsz' 48;
+  white-space: nowrap;
+}
+
+.header-stats {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.header-stats strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-subtle {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-subtle:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--text-tertiary);
+}
+
+/* --- Controls --- */
+.controls {
+  padding: 0.75rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.search-box input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  padding: 0.45rem 0.75rem 0.45rem 2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.search-box input:focus {
+  border-color: var(--copper);
+}
+
+.search-box input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.search-box::before {
+  content: '⌕';
+  position: absolute;
+  left: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.filter-group {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.filter-chip:hover {
+  background: var(--surface-hover);
+}
+
+.filter-chip.active {
+  background: var(--text);
+  color: var(--surface);
+  border-color: var(--text);
+}
+
+.filter-chip[data-tool].active { border-color: var(--tool-color, var(--text)); background: var(--tool-color, var(--text)); }
+
+.filter-divider {
+  width: 1px;
+  height: 1.4rem;
+  background: var(--border);
+  margin: 0 0.25rem;
+}
+
+.result-count {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* --- Call list --- */
+.call-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 2rem 3rem;
+}
+
+/* --- Time gap --- */
+.time-gap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.2rem 0;
+  margin: 0.15rem 0;
+}
+
+.time-gap-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-light);
+}
+
+.time-gap-label {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* --- Call entry --- */
+.call-entry {
+  border-bottom: 1px solid var(--border-light);
+  padding: 0.65rem 0;
+  transition: background 0.1s;
+}
+
+.call-entry:last-child { border-bottom: none; }
+
+.call-entry:hover {
+  background: color-mix(in oklch, var(--surface-hover) 50%, transparent);
+  margin: 0 -0.75rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.call-row {
+  display: grid;
+  grid-template-columns: 6rem auto 1fr 4.5rem;
+  gap: 0.75rem;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.call-time {
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+  letter-spacing: 0.01em;
+}
+
+.call-tool {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.call-summary {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.call-summary em {
+  font-style: normal;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.call-duration-col {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.call-duration-gauge {
+  width: 3rem;
+  height: 5px;
+  background: var(--gauge-track);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.call-duration-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--gauge-fill);
+  transition: width 0.3s ease-out;
+}
+
+.call-duration-text {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+  min-width: 3ch;
+  text-align: right;
+}
+
+.call-result-error .call-duration-fill { background: var(--error); }
+.call-result-error .call-tool { outline: 2px solid var(--error); outline-offset: -2px; }
+
+/* --- Expandable detail --- */
+.call-detail {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease-out;
+}
+
+.call-detail.open { grid-template-rows: 1fr; }
+
+.call-detail-inner {
+  overflow: hidden;
+}
+
+.call-detail-content {
+  padding: 0.6rem 0 0.4rem 6.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.detail-row {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+}
+
+.detail-label {
+  color: var(--text-tertiary);
+  font-weight: 500;
+  min-width: 5rem;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.detail-value code {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.detail-args {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 20rem;
+  overflow-y: auto;
+  margin-top: 0.2rem;
+}
+
+.detail-args .json-key { color: var(--copper); }
+.detail-args .json-string { color: var(--forest); }
+.detail-args .json-number { color: var(--slate); }
+.detail-args .json-bool, .detail-args .json-null { color: var(--plum); }
+
+.detail-error {
+  font-size: 0.82rem;
+  color: var(--error);
+  font-weight: 500;
+  padding: 0.4rem 0.6rem;
+  background: var(--error-light);
+  border-radius: var(--radius-sm);
+}
+
+/* --- Sort toggle --- */
+.sort-toggle {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.sort-toggle:hover { background: var(--surface-hover); }
+.sort-toggle .arrow { display: inline-block; transition: transform 0.2s; }
+.sort-toggle.desc .arrow { transform: rotate(180deg); }
+
+/* --- Scrollbar --- */
+.call-list::-webkit-scrollbar { width: 6px; }
+.call-list::-webkit-scrollbar-track { background: transparent; }
+.call-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.call-list::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+/* --- Responsive --- */
+@media (max-width: 700px) {
+  .header { padding: 1rem 1rem 0.75rem; }
+  .controls { padding: 0.6rem 1rem; }
+  .call-list { padding: 0.5rem 1rem 2rem; }
+  .call-row {
+    grid-template-columns: 5rem auto 1fr 3.5rem;
+    gap: 0.5rem;
+  }
+  .call-detail-content { padding-left: 0; }
+}
+
+/* --- Highlight matches --- */
+mark {
+  background: var(--amber-light);
+  color: var(--text);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* --- Empty state --- */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-tertiary);
+}
+
+.empty-state p {
+  font-size: 0.93rem;
+  margin-top: 0.5rem;
+}
+</style>
+</head>
+<body>
+
+<!-- Landing / Drop zone -->
+<div class="landing" id="landing">
+  <h1>Tool Log</h1>
+  <p>Visualize agent tool calls from JSONL session logs.</p>
+  <div class="dropzone" id="dropzone">
+    <div class="dropzone-icon">&#8593;</div>
+    <div class="dropzone-label">Drop a .jsonl file here</div>
+    <div class="dropzone-hint">or click to browse</div>
+    <input type="file" accept=".jsonl,.json,.txt" id="fileInput">
+  </div>
+</div>
+
+<!-- App shell -->
+<div class="app" id="app">
+  <div class="header">
+    <h1>Tool Log</h1>
+    <div class="header-stats" id="stats"></div>
+    <div class="header-actions">
+      <button class="btn-subtle" id="loadAnother">Load another</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="search-box">
+      <input type="text" id="search" placeholder="Search tools, args, descriptions…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="filter-divider"></div>
+    <div class="filter-group" id="toolFilters"></div>
+    <div class="filter-divider"></div>
+    <div class="filter-group" id="resultFilters">
+      <button class="filter-chip active" data-result="all">All</button>
+      <button class="filter-chip" data-result="ok">OK</button>
+      <button class="filter-chip" data-result="error">Error</button>
+    </div>
+    <div class="filter-divider"></div>
+    <button class="sort-toggle" id="sortToggle">
+      Time <span class="arrow">&#8595;</span>
+    </button>
+    <span class="result-count" id="resultCount"></span>
+  </div>
+
+  <div class="call-list" id="callList"></div>
+</div>
+
+<script>
+const TOOL_COLORS = {
+  Bash:    { bg: '#f0ddd2', fg: '#943d1e', border: '#d4a88c' },
+  Skill:   { bg: '#d4ead9', fg: '#2a5e38', border: '#a0cfaa' },
+  Read:    { bg: '#d2dee9', fg: '#3a5670', border: '#a4bdd0' },
+  Write:   { bg: '#e4d6ea', fg: '#5e3a6c', border: '#c4a8d0' },
+  Edit:    { bg: '#e4d6ea', fg: '#5e3a6c', border: '#c4a8d0' },
+  Glob:    { bg: '#f0e4c8', fg: '#705818', border: '#d4c498' },
+  Grep:    { bg: '#f0e4c8', fg: '#705818', border: '#d4c498' },
+  default: { bg: '#e8e2d8', fg: '#5a4e3e', border: '#c8bfb0' },
+};
+
+function getToolColor(tool) {
+  const base = tool.split('__')[0];
+  return TOOL_COLORS[base] || TOOL_COLORS.default;
+}
+
+function getToolShortName(tool) {
+  if (tool.startsWith('mcp__')) {
+    const parts = tool.split('__');
+    return parts.slice(1).join('.');
+  }
+  return tool;
+}
+
+// --- State ---
+let allCalls = [];
+let activeToolFilters = new Set();
+let activeResultFilter = 'all';
+let searchQuery = '';
+let sortBy = 'time';
+let sortDir = 'asc';
+
+// --- Parse JSONL into paired calls ---
+function parseJSONL(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  const entries = [];
+  for (const line of lines) {
+    try { entries.push(JSON.parse(line)); }
+    catch { /* skip malformed lines */ }
+  }
+
+  const preMap = new Map();
+  const postMap = new Map();
+
+  for (const e of entries) {
+    if (e.event === 'pre') preMap.set(e.id, e);
+    else if (e.event === 'post') postMap.set(e.id, e);
+  }
+
+  const calls = [];
+  for (const [id, pre] of preMap) {
+    const post = postMap.get(id);
+    calls.push({
+      id,
+      tool: pre.tool,
+      ts: new Date(pre.ts),
+      args: pre.args || {},
+      result: post?.result || 'pending',
+      duration: post?.duration ?? null,
+      reason: post?.reason || null,
+      postTs: post ? new Date(post.ts) : null,
+    });
+  }
+
+  // Also catch any post-only entries (shouldn't happen normally)
+  for (const [id, post] of postMap) {
+    if (!preMap.has(id)) {
+      calls.push({
+        id,
+        tool: post.tool,
+        ts: new Date(post.ts),
+        args: {},
+        result: post.result,
+        duration: post.duration ?? null,
+        reason: post.reason || null,
+        postTs: new Date(post.ts),
+      });
+    }
+  }
+
+  calls.sort((a, b) => a.ts - b.ts);
+  return calls;
+}
+
+// --- Summarize a call ---
+function summarize(call) {
+  const args = call.args;
+  if (call.tool === 'Bash' && args.description) return args.description;
+  if (call.tool === 'Bash' && args.command) {
+    const cmd = args.command.split('\n')[0].trim();
+    return cmd.length > 80 ? cmd.slice(0, 77) + '…' : cmd;
+  }
+  if (call.tool === 'Skill' && args.skill) return `skill: ${args.skill}`;
+  if (call.tool === 'Read' && args.file_path) return args.file_path;
+  if (call.tool === 'Write' && args.file_path) return args.file_path;
+  if (call.tool === 'Edit' && args.file_path) return args.file_path;
+  if (call.tool === 'Glob' && args.pattern) return args.pattern;
+  if (call.tool === 'Grep' && args.pattern) return args.pattern;
+  if (call.tool.startsWith('mcp__')) {
+    const keys = Object.keys(args);
+    if (keys.length === 0) return '(no args)';
+    const preview = keys.slice(0, 3).map(k => `${k}: ${JSON.stringify(args[k]).slice(0, 30)}`).join(', ');
+    return preview;
+  }
+  const keys = Object.keys(args);
+  if (keys.length === 0) return '(no args)';
+  return keys.slice(0, 2).map(k => `${k}: ${JSON.stringify(args[k]).slice(0, 40)}`).join(', ');
+}
+
+// --- Format time ---
+function formatTime(date) {
+  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function formatDuration(seconds) {
+  if (seconds == null) return '—';
+  if (seconds < 0.01) return '<0.01s';
+  if (seconds < 1) return seconds.toFixed(2) + 's';
+  if (seconds < 60) return seconds.toFixed(1) + 's';
+  const m = Math.floor(seconds / 60);
+  const s = (seconds % 60).toFixed(0);
+  return `${m}m${s}s`;
+}
+
+function formatGap(ms) {
+  const s = ms / 1000;
+  if (s < 60) return `${s.toFixed(0)}s gap`;
+  const m = Math.floor(s / 60);
+  const rem = Math.floor(s % 60);
+  return rem > 0 ? `${m}m ${rem}s gap` : `${m}m gap`;
+}
+
+// --- Syntax highlight JSON ---
+function highlightJSON(obj, indent) {
+  const raw = JSON.stringify(obj, null, indent);
+  return raw
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"([^"\\]*(\\.[^"\\]*)*)"\s*:/g, '<span class="json-key">"$1"</span>:')
+    .replace(/:\s*"([^"\\]*(\\.[^"\\]*)*)"/g, ': <span class="json-string">"$1"</span>')
+    .replace(/:\s*(\d+\.?\d*)/g, ': <span class="json-number">$1</span>')
+    .replace(/:\s*(true|false)/g, ': <span class="json-bool">$1</span>')
+    .replace(/:\s*(null)/g, ': <span class="json-null">$1</span>');
+}
+
+// --- Highlight search matches in text ---
+function highlightText(text, query) {
+  if (!query) return escapeHtml(text);
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`(${escaped})`, 'gi');
+  return escapeHtml(text).replace(re, '<mark>$1</mark>');
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// --- Render ---
+function getFilteredCalls() {
+  let filtered = allCalls;
+
+  if (activeToolFilters.size > 0) {
+    filtered = filtered.filter(c => activeToolFilters.has(c.tool));
+  }
+
+  if (activeResultFilter !== 'all') {
+    filtered = filtered.filter(c => c.result === activeResultFilter);
+  }
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(c => {
+      const haystack = [
+        c.tool,
+        getToolShortName(c.tool),
+        summarize(c),
+        JSON.stringify(c.args),
+        c.result,
+        c.reason || '',
+      ].join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+  }
+
+  if (sortBy === 'duration') {
+    filtered = [...filtered].sort((a, b) => {
+      const da = a.duration ?? -1;
+      const db = b.duration ?? -1;
+      return sortDir === 'asc' ? da - db : db - da;
+    });
+  } else {
+    filtered = [...filtered].sort((a, b) =>
+      sortDir === 'asc' ? a.ts - b.ts : b.ts - a.ts
+    );
+  }
+
+  return filtered;
+}
+
+function render() {
+  const filtered = getFilteredCalls();
+  const maxDuration = Math.max(...allCalls.map(c => c.duration ?? 0), 0.01);
+  const list = document.getElementById('callList');
+
+  document.getElementById('resultCount').textContent = `${filtered.length} of ${allCalls.length} calls`;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state"><p>No matching tool calls found.</p></div>';
+    return;
+  }
+
+  let html = '';
+  let prevTs = null;
+
+  for (const call of filtered) {
+    // Time gap
+    if (prevTs && sortBy === 'time') {
+      const gap = Math.abs(call.ts - prevTs);
+      if (gap > 5000) {
+        html += `<div class="time-gap">
+          <div class="time-gap-line"></div>
+          <span class="time-gap-label">${formatGap(gap)}</span>
+          <div class="time-gap-line"></div>
+        </div>`;
+      }
+    }
+    prevTs = call.ts;
+
+    const color = getToolColor(call.tool);
+    const shortName = getToolShortName(call.tool);
+    const summary = summarize(call);
+    const durationPct = call.duration != null ? Math.max(2, (call.duration / maxDuration) * 100) : 0;
+    const isError = call.result === 'error';
+
+    html += `<div class="call-entry ${isError ? 'call-result-error' : ''}" data-id="${call.id}">
+      <div class="call-row" onclick="toggleDetail('${call.id}')">
+        <span class="call-time">${formatTime(call.ts)}</span>
+        <span class="call-tool" style="background:${color.bg};color:${color.fg};border:1px solid ${color.border}">${highlightText(shortName, searchQuery)}</span>
+        <span class="call-summary">${highlightText(summary, searchQuery)}</span>
+        <div class="call-duration-col">
+          <div class="call-duration-gauge">
+            <div class="call-duration-fill" style="width:${durationPct}%"></div>
+          </div>
+          <span class="call-duration-text">${formatDuration(call.duration)}</span>
+        </div>
+      </div>
+      <div class="call-detail" id="detail-${call.id}">
+        <div class="call-detail-inner">
+          <div class="call-detail-content">
+            <div class="detail-row">
+              <span class="detail-label">Tool</span>
+              <span class="detail-value"><code>${escapeHtml(call.tool)}</code></span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">ID</span>
+              <span class="detail-value"><code>${escapeHtml(call.id)}</code></span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Timestamp</span>
+              <span class="detail-value">${call.ts.toISOString()}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Result</span>
+              <span class="detail-value" style="color:${isError ? 'var(--error)' : 'var(--forest)'};font-weight:500">${call.result}</span>
+            </div>
+            ${call.duration != null ? `<div class="detail-row">
+              <span class="detail-label">Duration</span>
+              <span class="detail-value">${call.duration}s</span>
+            </div>` : ''}
+            ${call.reason ? `<div class="detail-error">${escapeHtml(call.reason)}</div>` : ''}
+            ${Object.keys(call.args).length > 0 ? `
+              <div class="detail-row"><span class="detail-label">Arguments</span></div>
+              <div class="detail-args">${highlightJSON(call.args, 2)}</div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  list.innerHTML = html;
+}
+
+function toggleDetail(id) {
+  const el = document.getElementById('detail-' + id);
+  if (el) el.classList.toggle('open');
+}
+
+// --- Build tool filter chips ---
+function buildToolFilters() {
+  const tools = [...new Set(allCalls.map(c => c.tool))].sort();
+  const container = document.getElementById('toolFilters');
+  container.innerHTML = '';
+
+  for (const tool of tools) {
+    const color = getToolColor(tool);
+    const btn = document.createElement('button');
+    btn.className = 'filter-chip';
+    btn.dataset.tool = tool;
+    btn.style.setProperty('--tool-color', color.fg);
+    btn.textContent = getToolShortName(tool);
+    btn.onclick = () => {
+      if (activeToolFilters.has(tool)) {
+        activeToolFilters.delete(tool);
+        btn.classList.remove('active');
+      } else {
+        activeToolFilters.add(tool);
+        btn.classList.add('active');
+      }
+      render();
+    };
+    container.appendChild(btn);
+  }
+}
+
+// --- Stats ---
+function updateStats() {
+  const totalCalls = allCalls.length;
+  const totalDuration = allCalls.reduce((s, c) => s + (c.duration ?? 0), 0);
+  const errors = allCalls.filter(c => c.result === 'error').length;
+  const tools = new Set(allCalls.map(c => c.tool)).size;
+
+  let timespan = '';
+  if (allCalls.length > 1) {
+    const first = allCalls[0].ts;
+    const last = allCalls[allCalls.length - 1].ts;
+    const spanMs = last - first;
+    if (spanMs > 60000) {
+      timespan = `${(spanMs / 60000).toFixed(1)}m span`;
+    } else {
+      timespan = `${(spanMs / 1000).toFixed(0)}s span`;
+    }
+  }
+
+  const parts = [
+    `<strong>${totalCalls}</strong> calls`,
+    `<strong>${tools}</strong> tools`,
+    `<strong>${totalDuration.toFixed(2)}s</strong> total`,
+  ];
+  if (errors > 0) parts.push(`<strong style="color:var(--error)">${errors}</strong> errors`);
+  if (timespan) parts.push(timespan);
+
+  document.getElementById('stats').innerHTML = parts.join(' &middot; ');
+}
+
+// --- Wire up controls ---
+document.getElementById('search').addEventListener('input', (e) => {
+  searchQuery = e.target.value.trim();
+  render();
+});
+
+document.querySelectorAll('#resultFilters .filter-chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#resultFilters .filter-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeResultFilter = btn.dataset.result;
+    render();
+  });
+});
+
+document.getElementById('sortToggle').addEventListener('click', () => {
+  const btn = document.getElementById('sortToggle');
+  if (sortBy === 'time' && sortDir === 'asc') {
+    sortDir = 'desc';
+    btn.classList.add('desc');
+  } else if (sortBy === 'time' && sortDir === 'desc') {
+    sortBy = 'duration';
+    sortDir = 'desc';
+    btn.innerHTML = 'Duration <span class="arrow">&#8595;</span>';
+    btn.classList.add('desc');
+  } else if (sortBy === 'duration' && sortDir === 'desc') {
+    sortDir = 'asc';
+    btn.classList.remove('desc');
+  } else {
+    sortBy = 'time';
+    sortDir = 'asc';
+    btn.innerHTML = 'Time <span class="arrow">&#8595;</span>';
+    btn.classList.remove('desc');
+  }
+  render();
+});
+
+// --- File loading ---
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    if (!loadFromText(e.target.result)) {
+      alert('No valid tool log entries found in this file.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Drop zone
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('drag-over'); });
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length > 0) loadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files.length > 0) loadFile(e.target.files[0]);
+});
+
+// Load another
+document.getElementById('loadAnother').addEventListener('click', () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.jsonl,.json,.txt';
+  input.onchange = (e) => { if (e.target.files.length > 0) loadFile(e.target.files[0]); };
+  input.click();
+});
+
+// Keyboard shortcut
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') {
+    e.preventDefault();
+    document.getElementById('search')?.focus();
+  }
+  if (e.key === 'Escape') {
+    document.getElementById('search')?.blur();
+  }
+});
+
+// --- Auto-load from default path or ?file= param ---
+function loadFromText(text) {
+  allCalls = parseJSONL(text);
+  if (allCalls.length === 0) return false;
+  activeToolFilters.clear();
+  activeResultFilter = 'all';
+  searchQuery = '';
+  sortBy = 'time';
+  sortDir = 'asc';
+  document.getElementById('search').value = '';
+  document.getElementById('sortToggle').innerHTML = 'Time <span class="arrow">&#8595;</span>';
+  document.getElementById('sortToggle').classList.remove('desc');
+  document.querySelectorAll('#resultFilters .filter-chip').forEach(b => b.classList.remove('active'));
+  document.querySelector('#resultFilters [data-result="all"]').classList.add('active');
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('app').classList.add('active');
+  buildToolFilters();
+  updateStats();
+  render();
+  return true;
+}
+
+const DEFAULT_PATHS = [
+  '../groups/telegram_main/tool-log.jsonl',
+  '../groups/whatsapp_main/tool-log.jsonl',
+];
+
+(async function autoLoad() {
+  const params = new URLSearchParams(location.search);
+  const filePath = params.get('file');
+
+  const paths = filePath ? [filePath] : DEFAULT_PATHS;
+
+  for (const path of paths) {
+    try {
+      const res = await fetch(path);
+      if (!res.ok) continue;
+      const text = await res.text();
+      if (loadFromText(text)) return;
+    } catch { /* fetch fails on file:// — that's fine, show drop zone */ }
+  }
+})();
+</script>
+</body>
+</html>

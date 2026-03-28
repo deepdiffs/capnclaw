@@ -4,6 +4,7 @@ Changes made in this fork that differ from upstream NanoClaw.
 
 ## 2026-03-28
 
+- **Tool log viewer**: Added `tools/log-viewer.html` — self-contained browser UI that visualizes agent tool call logs from JSONL files. Pairs pre/post events, shows color-coded tool badges, duration gauges, time gaps, syntax-highlighted args, and supports search/filter/sort. Auto-loads from default group path when served locally. Added `npm run tool-logs` script to serve and open in one command
 - **Agent runner tool logging**: Added PreToolUse, PostToolUse, and PostToolUseFailure hooks that log every tool call to `/workspace/group/tool-log.jsonl` as structured JSONL (timestamp, tool name, id, args/response/error)
 - **Fix tool log duration**: Replaced `toolResponseDurationSeconds` (only worked for WebSearch) with wall-clock timing — pre hook records `Date.now()` per tool_use_id, post hook computes elapsed seconds. Duration now appears on all tool log entries
 - **X (Twitter) integration**: Added browser automation for X via IPC — post, like, reply, retweet, quote. Host spawns Playwright scripts against user's Chrome; container agents access via MCP tools. Main group only. Added playwright + dotenv-cli deps, updated build.sh/Dockerfile for project-root build context, added .dockerignore
