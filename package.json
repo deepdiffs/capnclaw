@@ -27,7 +27,8 @@
     "container:test": "./scripts/test-container.sh",
     "container:push-runner": "./scripts/push-runner.sh",
     "container:logs": "docker logs -f $(docker ps --filter name=nanoclaw- --format '{{.Names}}' | head -1)",
-    "container:exec": "docker exec -it $(docker ps --filter name=nanoclaw- --format '{{.Names}}' | head -1) /bin/bash"
+    "container:exec": "docker exec -it $(docker ps --filter name=nanoclaw- --format '{{.Names}}' | head -1) /bin/bash",
+    "container:restart": "./container/build.sh && ./scripts/push-runner.sh && docker rm -f $(docker ps -q --filter name=nanoclaw- | head -1) 2>/dev/null; echo 'Container restart ready — next message will spawn a fresh container.'"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",

@@ -76,6 +76,7 @@ npm run container:build        # Rebuild agent container image
 npm run container:build:clean  # Prune cache + rebuild (for stale COPY layers)
 npm run container:test         # Test container with a prompt
 npm run container:push-runner  # Clear cached agent-runner source for all groups
+npm run container:restart      # Build + push-runner + kill last container
 npm run container:logs         # Tail logs for the active container
 npm run container:exec         # Shell into the active container
 ```
@@ -89,6 +90,7 @@ What to run after making changes:
 | Both | `npm run container:push-runner && npm run deploy` | |
 | Container Dockerfile or dependencies | `npm run container:build` | Need a new image |
 | Container Dockerfile + stale cache | `npm run container:build:clean` | Prunes buildkit then rebuilds |
+| Container image + runner + force fresh | `npm run container:restart` | Builds image, pushes runner, kills running container |
 
 If running `npm run dev` while the service is active, stop the service first:
 ```bash
@@ -98,8 +100,6 @@ npm run svc start
 ```
 
 ## Troubleshooting
-
-**WhatsApp not connecting after upgrade:** WhatsApp is now a separate skill, not bundled in core. Run `/add-whatsapp` (or `npx tsx scripts/apply-skill.ts .claude/skills/add-whatsapp && npm run build`) to install it. Existing auth credentials and groups are preserved.
 
 ## Container Build Cache
 

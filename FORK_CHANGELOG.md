@@ -12,6 +12,9 @@ Changes made in this fork that differ from upstream NanoClaw.
 - **Fix group folder references**: Changed `.gitignore`, `src/db.test.ts`, and migration comment in `src/db.ts` from legacy `groups/main/` to `groups/telegram_main/` — the actual active group after machine migration
 - **Rename bot**: Renamed assistant from "McClaw" to "miniclaw" — updated default name in `src/config.ts`, `setup/register.ts`, and `groups/global/CLAUDE.md`
 - **Commit skill**: Added `/commit` operational skill (`.claude/skills/commit/SKILL.md`) that codifies the project's commit workflow — runs tests, lint, updates FORK_CHANGELOG.md, and creates a conventional commit
+- **Container restart script**: Added `container:restart` npm script — builds image, pushes runner, and kills running container in one command. Updated CLAUDE.md docs and "what to run" table
+- **Drop project settings in agent runner**: Removed `'project'` from `settingSources` in agent-runner SDK config so container agents only load user-level settings, not project-level
+- **CLAUDE.md cleanup**: Removed outdated WhatsApp troubleshooting note (WhatsApp is now a stable skill)
 
 ## 2026-03-21
 
