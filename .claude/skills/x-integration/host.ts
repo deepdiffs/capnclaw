@@ -141,6 +141,22 @@ export async function handleXIpc(
       result = await runScript('quote', { tweetUrl: data.tweetUrl, comment: data.comment });
       break;
 
+    case 'x_bookmarks':
+      result = await runScript('bookmarks', { count: data.count });
+      break;
+
+    case 'x_view_tweet':
+      if (!data.tweetUrl) {
+        result = { success: false, message: 'Missing tweetUrl' };
+        break;
+      }
+      result = await runScript('view_tweet', {
+        tweetUrl: data.tweetUrl,
+        includeReplies: data.includeReplies,
+        replyCount: data.replyCount,
+      });
+      break;
+
     default:
       return false;
   }

@@ -4,6 +4,7 @@ Changes made in this fork that differ from upstream NanoClaw.
 
 ## 2026-03-28
 
+- **X view tweet tool**: Added `x_view_tweet` MCP tool and `view_tweet.ts` browser script to view a tweet's content (author, text, timestamp, engagement metrics) and optionally load replies. Added `x_view_tweet` to host `scriptMap` in `src/ipc.ts` and to `host.ts` switch. Also added missing `x_bookmarks` case to `host.ts`
 - **Upstream merge (v1.2.17 → v1.2.42)**: Merged ~100 upstream commits. Key changes: OneCLI Agent Vault replaces credential proxy, built-in logger replaces pino, task scripts for scheduled tasks, message history overflow fix (`MAX_MESSAGES_PER_PROMPT`), per-group triggers, cursor recovery, shell injection prevention in `stopContainer()`, mount path injection blocking, timezone validation, CLAUDE.md templates for new groups, channel-formatting skill, Emacs channel skill, diagnostics opt-in. Resolved 8 merge conflicts — kept our Telegram channel (upstream moved to skill), tool logging hooks, bot pool config, Parallel AI integration
 - **Native credential proxy**: Applied `upstream/skill/native-credential-proxy` to replace OneCLI gateway with built-in `.env`-based credential injection. Simpler setup — no external service needed. Containers get credentials via local HTTP proxy
 - **Tool log viewer: pending filter and reverse chrono default**: Added "Pending" result filter chip (with amber styling matching error's red treatment), pending count in stats bar, and changed default sort to newest-first (reverse chronological)

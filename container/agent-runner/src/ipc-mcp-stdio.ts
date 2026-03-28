@@ -497,6 +497,37 @@ Default: 10 most recent bookmarks. Increase count to fetch more (max 100).`,
   },
 );
 
+server.tool(
+  'x_view_tweet',
+  `View a tweet and optionally its replies on X (Twitter). Main group only.
+Returns the tweet content with author, text, timestamp, engagement metrics, and URL.
+Set include_replies to true to also fetch replies and see the conversation thread.`,
+  {
+    tweet_url: z.string().describe('The tweet URL (e.g., https://x.com/user/status/123) or tweet ID'),
+    include_replies: z.boolean().default(false).describe('Whether to also fetch replies to the tweet'),
+    reply_count: z.number().min(1).max(50).default(10).describe('Number of replies to fetch if include_replies is true (default 10, max 50)'),
+  },
+  async (args) => {
+    if (!isMain) {
+      return { content: [{ type: 'text' as const, text: 'Only the main group can interact with X.' }], isError: true };
+    }
+
+    const requestId = `xviewtweet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    writeIpcFile(TASKS_DIR, {
+      type: 'x_view_tweet',
+      requestId,
+      tweetUrl: args.tweet_url,
+      includeReplies: args.include_replies,
+      replyCount: args.reply_count,
+      groupFolder,
+      timestamp: new Date().toISOString(),
+    });
+
+    const result = await waitForXResult(requestId, 120000); // longer timeout for loading replies
+    return { content: [{ type: 'text' as const, text: result.message }], isError: !result.success };
+  },
+);
+
 /* server.tool(
   'x_quote',
   'Quote tweet on X (Twitter). Main group only. Retweet with your own comment added.',

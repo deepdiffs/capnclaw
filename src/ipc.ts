@@ -496,6 +496,7 @@ export async function processTaskIpc(
           x_retweet: 'retweet',
           x_quote: 'quote',
           x_bookmarks: 'bookmarks',
+          x_view_tweet: 'view_tweet',
         };
         const script = scriptMap[data.type];
         if (script) {
