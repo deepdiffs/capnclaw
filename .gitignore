@@ -11,11 +11,11 @@ logs/
 
 # Groups - only track base structure and specific CLAUDE.md files
 groups/*
-!groups/main/
+!groups/telegram_main/
 !groups/global/
-groups/main/*
+groups/telegram_main/*
 groups/global/*
-!groups/main/CLAUDE.md
+!groups/telegram_main/CLAUDE.md
 !groups/global/CLAUDE.md
 
 # Secrets

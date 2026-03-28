@@ -111,7 +111,8 @@ function createSchema(database: Database.Database): void {
     database.exec(
       `ALTER TABLE registered_groups ADD COLUMN is_main INTEGER DEFAULT 0`,
     );
-    // Backfill: existing rows with folder = 'main' are the main group
+    // Legacy backfill: early installs used bare 'main' as the folder name
+    // (before the {channel}_main convention). Safe to keep for old DBs.
     database.exec(
       `UPDATE registered_groups SET is_main = 1 WHERE folder = 'main'`,
     );

@@ -4,6 +4,7 @@ Changes made in this fork that differ from upstream NanoClaw.
 
 ## 2026-03-28
 
+- **Fix group folder references**: Changed `.gitignore`, `src/db.test.ts`, and migration comment in `src/db.ts` from legacy `groups/main/` to `groups/telegram_main/` — the actual active group after machine migration
 - **Rename bot**: Renamed assistant from "McClaw" to "miniclaw" — updated default name in `src/config.ts`, `setup/register.ts`, and `groups/global/CLAUDE.md`
 
 ## 2026-03-21
