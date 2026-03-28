@@ -120,15 +120,37 @@ function log(message: string): void {
 const TOOL_LOG_PATH = '/workspace/group/tool-log.jsonl';
 
 function logTool(entry: Record<string, unknown>): void {
-  fs.appendFileSync(TOOL_LOG_PATH, JSON.stringify({ ts: new Date().toISOString(), ...entry }) + '\n');
+  try {
+    fs.appendFileSync(TOOL_LOG_PATH, JSON.stringify({ ts: new Date().toISOString(), ...entry }) + '\n');
+  } catch (e) {
+    log(`logTool error: ${e}`);
+  }
 }
 
 const toolStartTimes = new Map<string, number>();
+
+function touchesToolLog(toolName: string, toolInput: Record<string, unknown>): boolean {
+  const logFile = path.basename(TOOL_LOG_PATH);
+  if (toolName === 'Write' || toolName === 'Edit') {
+    const fp = String(toolInput.file_path ?? '');
+    return fp === TOOL_LOG_PATH || fp.endsWith(`/${logFile}`);
+  }
+  if (toolName === 'Bash') {
+    const cmd = String(toolInput.command ?? '');
+    return cmd.includes(logFile);
+  }
+  return false;
+}
 
 const preToolUseHook: HookCallback = async (input: HookInput) => {
   const { tool_name, tool_use_id, tool_input } = input as PreToolUseHookInput;
   toolStartTimes.set(tool_use_id, Date.now());
   logTool({ event: 'pre', tool: tool_name, id: tool_use_id, args: tool_input });
+
+  if (touchesToolLog(tool_name, tool_input as Record<string, unknown>)) {
+    return { decision: 'block' as const, reason: 'tool-log.jsonl is managed by the runner and cannot be modified by the agent' };
+  }
+
   return {};
 };
 

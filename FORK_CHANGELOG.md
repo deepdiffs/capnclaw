@@ -4,6 +4,7 @@ Changes made in this fork that differ from upstream NanoClaw.
 
 ## 2026-03-28
 
+- **Guard tool-log.jsonl from agent modification**: Added pre-tool-use hook that blocks Write, Edit, and Bash tool calls targeting `tool-log.jsonl`. Only the runner's `logTool()` method can append to the file. Wrapped `logTool` in try-catch so serialization errors can't crash the hook and bypass the block check
 - **Parallel AI integration**: Added Parallel AI MCP servers (search + deep research task) to agent containers. Host reads `PARALLEL_API_KEY` from `.env` via `readEnvFile()` and passes it to containers. Agent-runner conditionally configures `parallel-search` and `parallel-task` HTTP MCP servers when key is present. Replaced `WebSearch` with Parallel search in allowed tools. Added usage instructions to group CLAUDE.md with guidelines for quick search vs deep research (scheduler-based polling)
 - **Tool log viewer**: Added `tools/log-viewer.html` — self-contained browser UI that visualizes agent tool call logs from JSONL files. Pairs pre/post events, shows color-coded tool badges, duration gauges, time gaps, syntax-highlighted args, and supports search/filter/sort. Auto-loads from default group path when served locally. Added `npm run tool-logs` script to serve and open in one command
 - **Agent runner tool logging**: Added PreToolUse, PostToolUse, and PostToolUseFailure hooks that log every tool call to `/workspace/group/tool-log.jsonl` as structured JSONL (timestamp, tool name, id, args/response/error)
