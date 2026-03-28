@@ -25,7 +25,9 @@
     "container:build": "./container/build.sh",
     "container:build:clean": "docker builder prune -f && ./container/build.sh",
     "container:test": "./scripts/test-container.sh",
-    "container:push-runner": "./scripts/push-runner.sh"
+    "container:push-runner": "./scripts/push-runner.sh",
+    "container:logs": "docker logs -f $(docker ps --filter name=nanoclaw- --format '{{.Names}}' | head -1)",
+    "container:exec": "docker exec -it $(docker ps --filter name=nanoclaw- --format '{{.Names}}' | head -1) /bin/bash"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",

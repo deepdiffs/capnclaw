@@ -76,6 +76,8 @@ npm run container:build        # Rebuild agent container image
 npm run container:build:clean  # Prune cache + rebuild (for stale COPY layers)
 npm run container:test         # Test container with a prompt
 npm run container:push-runner  # Clear cached agent-runner source for all groups
+npm run container:logs         # Tail logs for the active container
+npm run container:exec         # Shell into the active container
 ```
 
 What to run after making changes:
