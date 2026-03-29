@@ -24,6 +24,12 @@ vi.mock('../logger.js', () => ({
   },
 }));
 
+// Mock transcription
+const mockTranscribeAudio = vi.hoisted(() => vi.fn());
+vi.mock('../transcription.js', () => ({
+  transcribeAudio: mockTranscribeAudio,
+}));
+
 // --- Grammy mock ---
 
 type Handler = (...args: any[]) => any;
@@ -136,6 +142,7 @@ function createMediaCtx(overrides: {
   messageId?: number;
   caption?: string;
   extra?: Record<string, any>;
+  getFile?: () => Promise<any>;
 }) {
   const chatId = overrides.chatId ?? 100200300;
   return {
@@ -156,6 +163,9 @@ function createMediaCtx(overrides: {
       ...(overrides.extra || {}),
     },
     me: { username: 'andy_ai_bot' },
+    getFile:
+      overrides.getFile ??
+      vi.fn().mockResolvedValue({ file_path: 'voice/file_0.oga' }),
   };
 }
 
@@ -596,7 +606,35 @@ describe('TelegramChannel', () => {
       );
     });
 
-    it('stores voice message with placeholder', async () => {
+    it('transcribes voice message when whisper is configured', async () => {
+      mockTranscribeAudio.mockResolvedValue('hello world');
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+      } as any);
+
+      const opts = createTestOpts();
+      const channel = new TelegramChannel('test-token', opts);
+      await channel.connect();
+
+      const ctx = createMediaCtx({});
+      await triggerMediaMessage('message:voice', ctx);
+
+      expect(mockTranscribeAudio).toHaveBeenCalled();
+      expect(opts.onMessage).toHaveBeenCalledWith(
+        'tg:100200300',
+        expect.objectContaining({ content: '[Voice: hello world]' }),
+      );
+      fetchSpy.mockRestore();
+    });
+
+    it('falls back to placeholder when transcription fails', async () => {
+      mockTranscribeAudio.mockResolvedValue(null);
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+      } as any);
+
       const opts = createTestOpts();
       const channel = new TelegramChannel('test-token', opts);
       await channel.connect();
@@ -608,6 +646,28 @@ describe('TelegramChannel', () => {
         'tg:100200300',
         expect.objectContaining({ content: '[Voice message]' }),
       );
+      fetchSpy.mockRestore();
+    });
+
+    it('falls back to placeholder when file download fails', async () => {
+      mockTranscribeAudio.mockResolvedValue(null);
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce({ ok: false, status: 500 } as any);
+
+      const opts = createTestOpts();
+      const channel = new TelegramChannel('test-token', opts);
+      await channel.connect();
+
+      const ctx = createMediaCtx({});
+      await triggerMediaMessage('message:voice', ctx);
+
+      expect(mockTranscribeAudio).not.toHaveBeenCalled();
+      expect(opts.onMessage).toHaveBeenCalledWith(
+        'tg:100200300',
+        expect.objectContaining({ content: '[Voice message]' }),
+      );
+      fetchSpy.mockRestore();
     });
 
     it('stores audio with placeholder', async () => {

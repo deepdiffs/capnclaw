@@ -50,7 +50,8 @@ You have access to two Parallel AI research tools:
 **Examples:**
 - "Who invented the transistor?"
 - "What's the latest news about quantum computing?"
-- "When was the UN founded?"
+- "Where's the next soccer world cup?"
+- "Who won the last 100m gold in the olympics?"
 - "What are the top programming languages in 2026?"
 
 **Speed:** Fast (2-5 seconds)

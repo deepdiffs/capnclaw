@@ -4,6 +4,7 @@ import { Api, Bot } from 'grammy';
 import { ASSISTANT_NAME, TRIGGER_PATTERN } from '../config.js';
 import { readEnvFile } from '../env.js';
 import { logger } from '../logger.js';
+import { transcribeAudio } from '../transcription.js';
 import { registerChannel, ChannelOpts } from './registry.js';
 import {
   Channel,
@@ -294,7 +295,29 @@ export class TelegramChannel implements Channel {
 
     this.bot.on('message:photo', (ctx) => storeNonText(ctx, '[Photo]'));
     this.bot.on('message:video', (ctx) => storeNonText(ctx, '[Video]'));
-    this.bot.on('message:voice', (ctx) => storeNonText(ctx, '[Voice message]'));
+    this.bot.on('message:voice', async (ctx) => {
+      const chatJid = `tg:${ctx.chat.id}`;
+      if (!this.opts.registeredGroups()[chatJid]) return;
+
+      let placeholder = '[Voice message]';
+      try {
+        const file = await ctx.getFile();
+        if (file.file_path) {
+          const fileUrl = `https://api.telegram.org/file/bot${this.botToken}/${file.file_path}`;
+          const res = await fetch(fileUrl);
+          if (res.ok) {
+            const buffer = Buffer.from(await res.arrayBuffer());
+            const transcript = await transcribeAudio(buffer, 'voice.ogg');
+            if (transcript) {
+              placeholder = `[Voice: ${transcript}]`;
+            }
+          }
+        }
+      } catch (err) {
+        logger.error({ err, chatJid }, 'Failed to transcribe voice message');
+      }
+      storeNonText(ctx, placeholder);
+    });
     this.bot.on('message:audio', (ctx) => storeNonText(ctx, '[Audio]'));
     this.bot.on('message:document', (ctx) => {
       const name = ctx.message.document?.file_name || 'file';
