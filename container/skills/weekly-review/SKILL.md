@@ -1,34 +1,17 @@
 ---
 name: weekly-review
-description: Guides a personal weekly review through adaptive Q&A across life areas (health, career, relationships, growth). Reads goals and past reviews from weekly-review/ folder, asks reflective questions via AskUserQuestion, scores each area 1-10, surfaces trends, and saves a structured summary. Use when the user wants to do a weekly review or reflect on their week.
+description: Conducts a personal weekly review through adaptive Q&A across life areas (health, career, relationships, growth). Reads goals and past reviews from weekly-review/ folder, asks reflective questions via AskUserQuestion, scores each area 1-10, surfaces trends, and saves a structured summary. Runs as a scheduled task every Sunday at 10pm Pacific in isolated context.
 ---
 
 # Weekly Review
 
 A guided personal review that reflects on your week across life areas, scores each area, spots trends, and sets priorities for next week.
 
-**Every review runs in an isolated context** — no session history, no conversation carryover. The only context is what the agent reads from the `weekly-review/` folder.
+This skill runs as a **scheduled task in isolated context** — no session history, no conversation carryover. The only context is what the agent reads from the `weekly-review/` folder.
 
-## Mode Detection
+## Setup Check
 
-This skill operates in two modes. Determine which mode to use:
-
-```bash
-echo "${NANOCLAW_SCHEDULED_TASK:-not_scheduled}"
-```
-
-Or check if the prompt starts with `[SCHEDULED TASK`:
-
-- **If this is a scheduled/isolated task** → proceed to **Review Flow** below.
-- **If this is a normal conversation** → proceed to **Launcher** below.
-
-## Launcher
-
-When invoked from a normal chat session, do NOT run the review inline. Instead, launch it as an isolated task.
-
-### 1. Setup Check
-
-Verify the folder structure exists:
+Before starting, verify the folder structure exists:
 
 ```bash
 ls /workspace/group/weekly-review/context/ 2>/dev/null && echo "READY" || echo "NEEDS_SETUP"
@@ -73,29 +56,9 @@ Learning, habits, reading, mindfulness, personal growth.
 (Add your current priorities here)
 ```
 
-Tell the user: "I've set up the weekly review folder. Please edit the files in `weekly-review/context/` with your actual goals, life areas, and priorities. Then say 'weekly review' when you're ready."
-
-Stop here — don't proceed until context files have real content.
-
-### 2. Schedule Isolated Review
-
-Get the current local time for the schedule:
-
-```bash
-date +"%Y-%m-%dT%H:%M:%S"
-```
-
-Use `mcp__nanoclaw__schedule_task` with:
-- `prompt`: "Run the weekly review skill. Read all files in weekly-review/context/ for goals and life areas. Read the most recent file in weekly-review/reviews/ for last week's review. Then conduct a guided weekly review using AskUserQuestion for each life area: ask reflective questions, get a 1-10 score per area, ask for overall satisfaction, plan next week's priorities with suggestions, surface trends from the last 3-6 reviews, and save the completed review to weekly-review/reviews/YYYY-WNN.md."
-- `schedule_type`: `once`
-- `schedule_value`: current local timestamp (from the date command above)
-- `context_mode`: `isolated`
-
-Tell the user: "Starting your weekly review in a fresh session — you'll get the first question shortly."
+Tell the user: "I've set up the weekly review folder. Please edit the files in `weekly-review/context/` with your actual goals, life areas, and priorities before the next scheduled review."
 
 ## Review Flow
-
-This section runs inside the isolated container. The agent has no session history — only what it reads from disk.
 
 ### 1. Load Context
 
