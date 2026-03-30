@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Create a container skill that guides users through a personal weekly review via adaptive Q&A with AskUserQuestion, reading goals/context and past reviews to produce a scored, structured summary.
+**Goal:** Create a container skill that guides users through a personal weekly review via adaptive Q&A with AskUserQuestion, running in an isolated context (no session history) to keep reflections clean and focused.
 
-**Architecture:** Single instruction-only SKILL.md in `container/skills/weekly-review/`. One prerequisite change: add `AskUserQuestion` to the container's allowed tools list in `container/agent-runner/src/index.ts`. The skill reads from `weekly-review/context/` and writes to `weekly-review/reviews/` in the group directory.
+**Architecture:** Single instruction-only SKILL.md in `container/skills/weekly-review/`. The skill has two modes: (1) **Launcher mode** — when invoked in a normal session, it schedules a one-time isolated task via `mcp__nanoclaw__schedule_task`; (2) **Review mode** — when running in the isolated container, it conducts the full guided Q&A. One prerequisite change: add `AskUserQuestion` to the container's allowed tools list.
 
 **Tech Stack:** Markdown (SKILL.md), TypeScript (one-line agent-runner change)
 
@@ -27,7 +27,7 @@ Expected: no matches (tool is not currently allowed).
 
 - [ ] **Step 2: Add AskUserQuestion to the allowedTools array**
 
-In `container/agent-runner/src/index.ts`, find the `allowedTools` array (around line 470) and add `'AskUserQuestion'` after the existing tool entries:
+In `container/agent-runner/src/index.ts`, find the `allowedTools` array (around line 470) and add `'AskUserQuestion'` after `'WebFetch'`:
 
 ```typescript
       allowedTools: [
@@ -83,7 +83,7 @@ mkdir -p container/skills/weekly-review
 
 Create `container/skills/weekly-review/SKILL.md` with the following content:
 
-```markdown
+````markdown
 ---
 name: weekly-review
 description: Guides a personal weekly review through adaptive Q&A across life areas (health, career, relationships, growth). Reads goals and past reviews from weekly-review/ folder, asks reflective questions via AskUserQuestion, scores each area 1-10, surfaces trends, and saves a structured summary. Use when the user wants to do a weekly review or reflect on their week.
@@ -93,15 +93,34 @@ description: Guides a personal weekly review through adaptive Q&A across life ar
 
 A guided personal review that reflects on your week across life areas, scores each area, spots trends, and sets priorities for next week.
 
-## Setup Check
+**Every review runs in an isolated context** — no session history, no conversation carryover. The only context is what the agent reads from the `weekly-review/` folder.
 
-Before starting, verify the folder structure exists:
+## Mode Detection
+
+This skill operates in two modes. Determine which mode to use:
+
+```bash
+echo "${NANOCLAW_SCHEDULED_TASK:-not_scheduled}"
+```
+
+Or check if the prompt starts with `[SCHEDULED TASK`:
+
+- **If this is a scheduled/isolated task** → proceed to **Review Flow** below.
+- **If this is a normal conversation** → proceed to **Launcher** below.
+
+## Launcher
+
+When invoked from a normal chat session, do NOT run the review inline. Instead, launch it as an isolated task.
+
+### 1. Setup Check
+
+Verify the folder structure exists:
 
 ```bash
 ls /workspace/group/weekly-review/context/ 2>/dev/null && echo "READY" || echo "NEEDS_SETUP"
 ```
 
-If `NEEDS_SETUP`, create the structure and tell the user to populate it:
+If `NEEDS_SETUP`, create the structure:
 
 ```bash
 mkdir -p /workspace/group/weekly-review/context /workspace/group/weekly-review/reviews
@@ -109,7 +128,7 @@ mkdir -p /workspace/group/weekly-review/context /workspace/group/weekly-review/r
 
 Then create starter files:
 
-**`/workspace/group/weekly-review/context/areas.md`** — life areas to review:
+**`/workspace/group/weekly-review/context/areas.md`**:
 ```markdown
 # Life Areas
 
@@ -126,7 +145,7 @@ Family, friends, romantic partner, social life.
 Learning, habits, reading, mindfulness, personal growth.
 ```
 
-**`/workspace/group/weekly-review/context/goals.md`** — placeholder for goals:
+**`/workspace/group/weekly-review/context/goals.md`**:
 ```markdown
 # Goals
 
@@ -142,9 +161,27 @@ Learning, habits, reading, mindfulness, personal growth.
 
 Tell the user: "I've set up the weekly review folder. Please edit the files in `weekly-review/context/` with your actual goals, life areas, and priorities. Then say 'weekly review' when you're ready."
 
-Stop here — don't proceed with the review until context files have real content.
+Stop here — don't proceed until context files have real content.
+
+### 2. Schedule Isolated Review
+
+Get the current local time for the schedule:
+
+```bash
+date +"%Y-%m-%dT%H:%M:%S"
+```
+
+Use `mcp__nanoclaw__schedule_task` with:
+- `prompt`: "Run the weekly review skill. Read all files in weekly-review/context/ for goals and life areas. Read the most recent file in weekly-review/reviews/ for last week's review. Then conduct a guided weekly review using AskUserQuestion for each life area: ask reflective questions, get a 1-10 score per area, ask for overall satisfaction, plan next week's priorities with suggestions, surface trends from the last 3-6 reviews, and save the completed review to weekly-review/reviews/YYYY-WNN.md."
+- `schedule_type`: `once`
+- `schedule_value`: current local timestamp (from the date command above)
+- `context_mode`: `isolated`
+
+Tell the user: "Starting your weekly review in a fresh session — you'll get the first question shortly."
 
 ## Review Flow
+
+This section runs inside the isolated container. The agent has no session history — only what it reads from disk.
 
 ### 1. Load Context
 
@@ -265,7 +302,7 @@ Write the review to `/workspace/group/weekly-review/reviews/YYYY-WNN.md` using t
 Use ↑ if score increased, ↓ if decreased, → if unchanged vs. last week. If this is the first review, omit the trend column.
 
 Confirm to the user that the review has been saved and give a brief encouraging closing.
-```
+````
 
 - [ ] **Step 3: Verify skill file is under 500 lines**
 
@@ -281,19 +318,37 @@ Expected: well under 500 lines.
 git add container/skills/weekly-review/SKILL.md
 git commit -m "feat: add weekly-review container skill
 
-Guided personal weekly review via adaptive Q&A. Reads goals and
-past reviews, scores each life area 1-10, surfaces trends, and
-plans next week's priorities."
+Guided personal weekly review via adaptive Q&A in isolated context.
+Launcher mode schedules a fresh session via schedule_task. Review
+mode reads goals, conducts Q&A, scores areas, surfaces trends, and
+saves a structured summary."
 ```
 
 ---
 
-### Task 3: Push Runner and Test
+### Task 3: Update Changelog, Push Runner, and Deploy
 
 **Files:**
-- No file changes — runtime verification only.
+- Modify: `FORK_CHANGELOG.md`
 
-- [ ] **Step 1: Push the updated agent-runner source**
+- [ ] **Step 1: Update FORK_CHANGELOG.md**
+
+Add a dated entry to `FORK_CHANGELOG.md` under the most recent section:
+
+```markdown
+### 2026-03-29
+- **Added weekly-review container skill** — guided personal weekly review via adaptive Q&A in isolated context, with scoring, trends, and next-week planning
+- **Added AskUserQuestion to container allowed tools** — enables structured Q&A prompts in container skills
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add FORK_CHANGELOG.md
+git commit -m "docs: update fork changelog for weekly review skill"
+```
+
+- [ ] **Step 3: Push the updated agent-runner source**
 
 ```bash
 npm run container:push-runner
@@ -301,43 +356,25 @@ npm run container:push-runner
 
 This clears cached agent-runner source so the next container spawn picks up the AskUserQuestion change.
 
-- [ ] **Step 2: Verify the skill is synced into a group**
-
-Check that the skill directory will be copied on next container start:
+- [ ] **Step 4: Deploy**
 
 ```bash
-ls container/skills/weekly-review/SKILL.md
+npm run deploy
 ```
 
-Expected: file exists. The container-runner's skill sync loop (`src/container-runner.ts:151-161`) copies all directories from `container/skills/` into each group's `.claude/skills/` on every container spawn.
+This compiles host TypeScript and restarts the service, which will sync the new skill directory on the next container spawn.
 
-- [ ] **Step 3: Deploy if service is running**
+- [ ] **Step 5: Verify**
+
+Check that the skill file exists and will be synced:
 
 ```bash
-npm run container:push-runner && npm run deploy
+ls -la container/skills/weekly-review/SKILL.md
 ```
-
-This ensures the host picks up the new skill directory for syncing.
-
-- [ ] **Step 4: Test manually**
 
 In a chat group, send "weekly review" and verify:
 1. The agent recognizes the intent and activates the skill
-2. It checks for the `weekly-review/` folder and runs setup if missing
-3. AskUserQuestion prompts appear with structured options
-4. The review file is written to `weekly-review/reviews/`
-
-- [ ] **Step 5: Commit FORK_CHANGELOG.md update**
-
-Add a dated entry to `FORK_CHANGELOG.md`:
-
-```markdown
-### 2026-03-29
-- **Added weekly-review container skill** — guided personal weekly review via adaptive Q&A across life areas with scoring, trends, and next-week planning
-- **Added AskUserQuestion to container allowed tools** — enables structured Q&A prompts in container skills
-```
-
-```bash
-git add FORK_CHANGELOG.md
-git commit -m "docs: update fork changelog for weekly review skill"
-```
+2. If no `weekly-review/` folder exists, it creates the structure with starter files
+3. If folder exists, it schedules an isolated one-time task
+4. The isolated container runs the review, AskUserQuestion prompts appear
+5. The review file is written to `weekly-review/reviews/`

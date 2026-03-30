@@ -8,9 +8,18 @@
 
 A container skill that guides the user through a personal weekly review via adaptive Q&A. The agent reads the user's goals, life areas, and past reviews from a dedicated folder, then conducts a conversational reflection using AskUserQuestion — scoring each area, surfacing trends, and planning the next week.
 
-## Trigger
+## Trigger & Isolation
 
-Manual invocation only. The agent recognizes when the user wants to do a weekly review (e.g., "weekly review", "let's review my week", "time for my review") and activates the skill.
+Manual invocation only. The agent recognizes when the user wants to do a weekly review (e.g., "weekly review", "let's review my week", "time for my review").
+
+**Critical: The review MUST run in an isolated context.** The review should not have access to the group's conversation history or session state. It should only see the files in `weekly-review/context/` and `weekly-review/reviews/`. This prevents session history from polluting the reflective Q&A.
+
+**Mechanism:** When the current-session agent recognizes the intent, it uses `mcp__nanoclaw__schedule_task` to schedule a one-time isolated task:
+- `schedule_type: 'once'` — immediate execution (timestamp set to now)
+- `context_mode: 'isolated'` — fresh session, no conversation history
+- `prompt` — contains instructions to run the weekly review skill
+
+The scheduler picks this up within ~1 minute, spawns a fresh container with no session history, and the skill runs in that clean context. Results are sent back to the user via the channel.
 
 ## Folder Structure
 
@@ -117,6 +126,7 @@ description: Guides a personal weekly review through adaptive Q&A across life ar
 ## Design Decisions
 
 - **Approach**: Single SKILL.md, purely instructional, no code files or scripts. The agent is smart enough to read context, ask good questions, compute trends from markdown, and write structured output.
+- **Isolation**: Every review invocation runs in a fresh isolated container with no session/conversation history. The only context the agent sees is what it reads from `weekly-review/context/` and `weekly-review/reviews/`. This is achieved via `schedule_task` with `context_mode: 'isolated'`.
 - **Life areas**: Dynamic — driven by `context/areas.md` contents, not hardcoded in the skill. Agent can suggest new areas.
 - **Question depth**: Adaptive — 1-2 core questions per area with deeper probing based on response signals.
 - **History window**: 3-6 past reviews for trends — enough for patterns without overwhelming context.
