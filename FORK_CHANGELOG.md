@@ -2,6 +2,11 @@
 
 Changes made in this fork that differ from upstream NanoClaw.
 
+## 2026-03-29
+
+- **Added weekly-review container skill** — guided personal weekly review via adaptive Q&A in isolated context, with scoring, trends, and next-week planning
+- **Added AskUserQuestion to container allowed tools** — enables structured Q&A prompts in container skills
+
 ## 2026-03-28
 
 - **Telegram voice transcription**: Added `src/transcription.ts` module that sends voice audio to an OpenAI-compatible Whisper endpoint for transcription. Modified Telegram voice handler to download voice files, transcribe them, and store `[Voice: transcript]` instead of `[Voice message]` placeholder. Gracefully falls back to placeholder on failure. Configured via `WHISPER_API_URL`, `WHISPER_API_KEY`, `WHISPER_MODEL` env vars. No new npm dependencies (uses native fetch)
