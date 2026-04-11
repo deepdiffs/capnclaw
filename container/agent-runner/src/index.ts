@@ -521,6 +521,7 @@ async function runQuery(
         'mcp__nanoclaw__*',
         'mcp__parallel-search__*',
         'mcp__parallel-task__*',
+        'mcp__qmd__*',
       ],
       env: sdkEnv,
       permissionMode: 'bypassPermissions',
@@ -552,6 +553,10 @@ async function runQuery(
           };
           log('Parallel AI MCP servers configured');
         }
+        servers['qmd'] = {
+          type: 'http',
+          url: 'http://host.docker.internal:8182/mcp',
+        };
         return servers;
       })(),
       hooks: {
