@@ -4,6 +4,8 @@ Changes made in this fork that differ from upstream NanoClaw.
 
 ## 2026-04-11
 
+- **deploy.sh hardening**: Fixed 4 code review issues — added jq dependency check with install hint, fixed SSH path quoting via `printf %q` to prevent command injection, added nullglob + empty-array guards for agents directory, and fixed localhost agents so postDeploy commands run locally instead of being silently skipped
+
 - **miniclaw agent overlay**: Created `agents/miniclaw/` overlay directory with `agent.json` (localhost deploy config) and exact copies of current `groups/global/CLAUDE.md` and `groups/telegram_main/CLAUDE.md`. First step of multi-agent deployment system
 
 - **Removed reviewer group**: Cleaned up `telegram_the-reviewer` group directory and database registration entry from previous setup attempt
