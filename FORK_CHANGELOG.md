@@ -2,6 +2,10 @@
 
 Changes made in this fork that differ from upstream NanoClaw.
 
+## 2026-04-11
+
+- **Removed weekly-review planning docs** — deleted implementation plan and design spec from `docs/superpowers/` now that the skill has been implemented and simplified
+
 ## 2026-03-29
 
 - **Added weekly-review container skill** — guided personal weekly review via adaptive Q&A in isolated context, with scoring, trends, and next-week planning
