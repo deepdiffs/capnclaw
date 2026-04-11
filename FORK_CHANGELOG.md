@@ -4,6 +4,9 @@ Changes made in this fork that differ from upstream NanoClaw.
 
 ## 2026-04-11
 
+- **Removed reviewer group**: Cleaned up `telegram_the-reviewer` group directory and database registration entry from previous setup attempt
+- **Docker .env shadow mount**: Restored explicit `/dev/null` mount over `.env` in container-runner for Docker runtime (Apple Container uses entrypoint mount-bind instead). Improves defense-in-depth for secret isolation
+- **Multi-agent deployment plan**: Added `docs/multi-agent-plan.md` — architecture for running 4-8 agents from the same codebase using overlay directories and a deploy script
 - **Upstream merge (v1.2.42 → v1.2.52)**: Merged upstream/main + 5 skill branches. Key upstream changes: Agent SDK 0.2.92 (1M context, 200k auto-compact), auto-compact threshold 165k tokens, session cleanup (stale artifact pruning), stale session recovery, reply/quoted message context, writable global memory mount, store mounted rw for main agent, npm audit fixes. Resolved 4 conflicts in upstream/main merge — kept our tool logging hooks, AskUserQuestion, Parallel AI MCP tools, credential proxy, and `telegram_main` group folder
 - **Skill updates**: Updated apple-container (22 commits — entrypoint privilege dropping, .env mount-bind shadowing), compact (19 commits — `/compact` session command with slash-command handling in host and container), channel-formatting (3 commits — text-styles.ts for channel-native formatting), ollama-tool (3 commits — admin tools flag, updated MCP config). Installed new qmd skill (QMD MCP server at `host.docker.internal:8182`). Wiki already up to date
 - **Docker runtime fix**: Restored `src/container-runtime.ts` to Docker after apple-container merge overwrote it with Apple Container code (duplicate `CONTAINER_HOST_GATEWAY`/`PROXY_BIND_HOST` declarations). Updated tests to match Docker runtime commands
