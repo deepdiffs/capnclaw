@@ -6,6 +6,11 @@
 #   ./deploy.sh --all --code       Core code only (skip .env/personality)
 set -euo pipefail
 
+if ! command -v jq &>/dev/null; then
+  echo "Error: jq is required but not installed. Install with: brew install jq" >&2
+  exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGENTS_DIR="$SCRIPT_DIR/agents"
 
@@ -49,6 +54,10 @@ deploy_agent() {
 
   if [[ "$host" == "localhost" ]]; then
     echo "  Skipping rsync for localhost agent"
+    if [[ -n "$post_deploy" ]]; then
+      echo "  Running post-deploy locally: $post_deploy"
+      (cd "$path" && eval "$post_deploy")
+    fi
   else
     # Step 1: rsync core code
     echo "  Syncing core code..."
@@ -70,7 +79,7 @@ deploy_agent() {
     # Step 3: Run post-deploy command
     if [[ -n "$post_deploy" ]]; then
       echo "  Running post-deploy: $post_deploy"
-      ssh "$host" "cd '$path' && $post_deploy"
+      ssh "$host" "cd $(printf '%q' "$path") && $post_deploy"
     fi
   fi
 
@@ -91,8 +100,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+shopt -s nullglob
+
 if [[ "$DEPLOY_ALL" == "true" ]]; then
-  for agent_dir in "$AGENTS_DIR"/*/; do
+  agents=("$AGENTS_DIR"/*/)
+  if [[ ${#agents[@]} -eq 0 ]]; then
+    echo "Error: No agents found in $AGENTS_DIR" >&2
+    exit 1
+  fi
+  for agent_dir in "${agents[@]}"; do
     agent=$(basename "$agent_dir")
     deploy_agent "$agent" "$CODE_ONLY"
   done
@@ -105,10 +121,15 @@ else
   echo "  ./deploy.sh --all --code       Core code only (skip .env/personality)"
   echo ""
   echo "Available agents:"
-  for agent_dir in "$AGENTS_DIR"/*/; do
-    agent=$(basename "$agent_dir")
-    host=$(jq -r '.host' "$agent_dir/agent.json" 2>/dev/null || echo "unknown")
-    echo "  $agent → $host"
-  done
+  agents=("$AGENTS_DIR"/*/)
+  if [[ ${#agents[@]} -eq 0 ]]; then
+    echo "  (none)"
+  else
+    for agent_dir in "${agents[@]}"; do
+      agent=$(basename "$agent_dir")
+      host=$(jq -r '.host' "$agent_dir/agent.json" 2>/dev/null || echo "unknown")
+      echo "  $agent → $host"
+    done
+  fi
   exit 1
 fi
