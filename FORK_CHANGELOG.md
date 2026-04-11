@@ -4,6 +4,8 @@ Changes made in this fork that differ from upstream NanoClaw.
 
 ## 2026-04-11
 
+- **miniclaw agent overlay**: Created `agents/miniclaw/` overlay directory with `agent.json` (localhost deploy config) and exact copies of current `groups/global/CLAUDE.md` and `groups/telegram_main/CLAUDE.md`. First step of multi-agent deployment system
+
 - **Removed reviewer group**: Cleaned up `telegram_the-reviewer` group directory and database registration entry from previous setup attempt
 - **Docker .env shadow mount**: Restored explicit `/dev/null` mount over `.env` in container-runner for Docker runtime (Apple Container uses entrypoint mount-bind instead). Improves defense-in-depth for secret isolation
 - **Multi-agent deployment plan**: Added `docs/multi-agent-plan.md` — architecture for running 4-8 agents from the same codebase using overlay directories and a deploy script
