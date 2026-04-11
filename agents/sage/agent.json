@@ -1,0 +1,6 @@
+{
+  "name": "sage",
+  "host": "user@sage-host",
+  "path": "/home/user/nanoclaw",
+  "postDeploy": "npm run deploy"
+}
