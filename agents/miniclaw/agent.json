@@ -1,0 +1,6 @@
+{
+  "name": "miniclaw",
+  "host": "localhost",
+  "path": "/Users/j/workspace/projects/capnclaw",
+  "postDeploy": "npm run deploy"
+}
