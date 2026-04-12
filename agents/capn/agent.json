@@ -1,0 +1,6 @@
+{
+  "name": "capn",
+  "host": "piclaw",
+  "path": "/home/jj/workspace/projects/claws",
+  "postDeploy": "npm run deploy"
+}
