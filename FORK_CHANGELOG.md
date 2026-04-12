@@ -2,6 +2,11 @@
 
 Changes made in this fork that differ from upstream NanoClaw.
 
+## 2026-04-12
+
+### Fixed
+- **Parallel AI MCP servers broken after OneCLI migration**: The OneCLI migration (`f8a6437`) removed the `-e PARALLEL_API_KEY=…` env injection from `container-runner.ts`, so `process.env.PARALLEL_API_KEY` was always undefined inside containers and the `parallel-search` / `parallel-task` MCP servers were silently skipped. The existing vault secret also had host-pattern `api.parallel.ai`, which didn't match the MCP subdomains. Fix: added two new OneCLI secrets ("Parallel Search MCP", "Parallel Task MCP") with host-patterns `search-mcp.parallel.ai` and `task-mcp.parallel.ai` and `Authorization: Bearer {value}` injection; updated `container/agent-runner/src/index.ts` to unconditionally register the Parallel MCP servers without an `Authorization` header (OneCLI injects it at the proxy layer). Containers still never see the raw `PARALLEL_API_KEY`
+
 ## 2026-04-11
 
 ### Added

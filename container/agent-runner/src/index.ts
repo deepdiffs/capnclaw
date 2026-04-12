@@ -539,20 +539,19 @@ async function runQuery(
             },
           },
         };
-        const parallelApiKey = process.env.PARALLEL_API_KEY;
-        if (parallelApiKey) {
-          servers['parallel-search'] = {
-            type: 'http',
-            url: 'https://search-mcp.parallel.ai/mcp',
-            headers: { 'Authorization': `Bearer ${parallelApiKey}` },
-          };
-          servers['parallel-task'] = {
-            type: 'http',
-            url: 'https://task-mcp.parallel.ai/mcp',
-            headers: { 'Authorization': `Bearer ${parallelApiKey}` },
-          };
-          log('Parallel AI MCP servers configured');
-        }
+        // Parallel AI MCP servers — the OneCLI gateway injects the
+        // `Authorization: Bearer <key>` header at the proxy layer based on the
+        // matching host-pattern secrets ("Parallel Search MCP" / "Parallel
+        // Task MCP"), so the container never sees the raw key.
+        servers['parallel-search'] = {
+          type: 'http',
+          url: 'https://search-mcp.parallel.ai/mcp',
+        };
+        servers['parallel-task'] = {
+          type: 'http',
+          url: 'https://task-mcp.parallel.ai/mcp',
+        };
+        log('Parallel AI MCP servers registered (auth injected by OneCLI gateway)');
         servers['qmd'] = {
           type: 'http',
           url: 'http://host.docker.internal:8182/mcp',
