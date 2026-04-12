@@ -264,7 +264,9 @@ async function buildContainerArgs(
   if (active) {
     logger.info('OneCLI gateway config applied');
   } else {
-    logger.warn('OneCLI gateway not reachable — container will have no credentials');
+    logger.warn(
+      'OneCLI gateway not reachable — container will have no credentials',
+    );
   }
 
   // Runtime-specific args for host gateway resolution
@@ -314,7 +316,11 @@ export async function runContainerAgent(
   const mounts = buildVolumeMounts(group, input.isMain);
   const safeName = group.folder.replace(/[^a-zA-Z0-9-]/g, '-');
   const containerName = `nanoclaw-${safeName}-${Date.now()}`;
-  const containerArgs = await buildContainerArgs(mounts, containerName, input.isMain);
+  const containerArgs = await buildContainerArgs(
+    mounts,
+    containerName,
+    input.isMain,
+  );
 
   logger.debug(
     {
