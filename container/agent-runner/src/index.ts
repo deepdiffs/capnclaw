@@ -20,6 +20,37 @@ import { execFile } from 'child_process';
 import { query, HookCallback, HookInput, PreCompactHookInput, PreToolUseHookInput, PostToolUseHookInput, PostToolUseFailureHookInput } from '@anthropic-ai/claude-agent-sdk';
 import { fileURLToPath } from 'url';
 
+// Bypass the OneCLI HTTP proxy for the QMD MCP host. Node's undici
+// EnvHttpProxyAgent (marked experimental) fails to parse OneCLI's response
+// when proxying to private tailnet destinations, even though the proxy
+// itself forwards the request successfully. Adding the QMD host to
+// NO_PROXY makes Node's fetch connect to qmd directly — which works via
+// the container's tailnet routing — while leaving all other traffic on
+// the OneCLI-managed proxy path. Must run before the SDK creates its
+// HTTP agents, so it sits at the top of the module.
+{
+  const qmdUrl = process.env.QMD_MCP_URL;
+  if (qmdUrl) {
+    try {
+      const host = new URL(qmdUrl).hostname;
+      const existing = process.env.NO_PROXY || process.env.no_proxy || '';
+      const parts = new Set(
+        existing
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      );
+      parts.add(host);
+      const merged = Array.from(parts).join(',');
+      process.env.NO_PROXY = merged;
+      process.env.no_proxy = merged;
+    } catch {
+      // Malformed URL — leave NO_PROXY alone; the SDK will surface the
+      // connection error when it tries to register the MCP server.
+    }
+  }
+}
+
 interface ContainerInput {
   prompt: string;
   sessionId?: string;
@@ -552,10 +583,17 @@ async function runQuery(
           url: 'https://task-mcp.parallel.ai/mcp',
         };
         log('Parallel AI MCP servers registered (auth injected by OneCLI gateway)');
-        servers['qmd'] = {
-          type: 'http',
-          url: 'http://host.docker.internal:8182/mcp',
-        };
+        // QMD MCP server — only registered when QMD_MCP_URL is set on the
+        // host. No fallback: a stray per-host qmd is no longer part of the
+        // architecture, and pointing at an unreachable default would just
+        // produce silent failures at SDK init time.
+        const qmdUrl = process.env.QMD_MCP_URL;
+        if (qmdUrl) {
+          servers['qmd'] = { type: 'http', url: qmdUrl };
+          log(`QMD MCP server registered at ${qmdUrl}`);
+        } else {
+          log('QMD_MCP_URL not set — qmd MCP server will not be registered');
+        }
         return servers;
       })(),
       hooks: {

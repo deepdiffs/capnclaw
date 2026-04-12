@@ -257,6 +257,13 @@ async function buildContainerArgs(
     args.push('-e', 'OLLAMA_ADMIN_TOOLS=true');
   }
 
+  // Forward QMD MCP URL override so agents can point at a remote qmd.
+  // When unset, the agent-runner falls back to host-local qmd on 8182.
+  const { QMD_MCP_URL } = readEnvFile(['QMD_MCP_URL']);
+  if (QMD_MCP_URL) {
+    args.push('-e', `QMD_MCP_URL=${QMD_MCP_URL}`);
+  }
+
   // Route API traffic through OneCLI gateway (containers never see real secrets)
   const { ONECLI_URL } = readEnvFile(['ONECLI_URL']);
   const onecli = new OneCLI({ url: ONECLI_URL || undefined });
