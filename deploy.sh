@@ -18,18 +18,21 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGENTS_DIR="$SCRIPT_DIR/agents"
 
 # Core code excludes — these are never rsynced
-# groups/ is excluded because each agent has its own conversation history
-# and runtime data there. Personality files (CLAUDE.md) come from the overlay.
+# groups/: sync groups/global/ (shared personality/memory, part of core),
+# but exclude all other groups/* which hold per-instance runtime data.
 CORE_EXCLUDES=(
   --exclude='agents/'
   --exclude='store/'
   --exclude='data/'
   --exclude='logs/'
-  --exclude='groups/'
+  --include='groups/'
+  --include='groups/global/***'
+  --exclude='groups/*'
   --exclude='node_modules/'
   --exclude='dist/'
   --exclude='.env'
   --exclude='.git/'
+  --exclude='deploy.sh'
   --exclude='.claude/settings.local.json'
   --exclude='.DS_Store'
   --exclude='.nanoclaw/'
