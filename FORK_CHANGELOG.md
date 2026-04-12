@@ -10,6 +10,10 @@ Changes made in this fork that differ from upstream NanoClaw.
 - `miniclaw` as first agent overlay (extracted from current config)
 - `sage` as example second agent overlay
 - Deploy script supports single agent, `--all`, and `--code` (code-only) modes
+- `capn` agent overlay for piclaw (first remote deployment target)
+
+### Changed
+- Migrated from native credential proxy to OneCLI Agent Vault — both local and remote agents use the same credential system. Anthropic, Parallel AI, and Whisper keys moved from `.env` to vault
 
 - **Removed reviewer group**: Cleaned up `telegram_the-reviewer` group directory and database registration entry from previous setup attempt
 - **Docker .env shadow mount**: Restored explicit `/dev/null` mount over `.env` in container-runner for Docker runtime (Apple Container uses entrypoint mount-bind instead). Improves defense-in-depth for secret isolation
