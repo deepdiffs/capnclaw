@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Deploy NanoClaw agent(s) to target machines
 # Usage:
-#   ./deploy.sh <agent-name>       Deploy one agent
-#   ./deploy.sh --all              Deploy all agents
-#   ./deploy.sh --all --code       Core code only (skip .env/personality)
+#   ./deploy.sh <agent-name>          Deploy one agent (sync + build + restart)
+#   ./deploy.sh <agent-name> --init   First-time: sync code + overlay, skip postDeploy
+#                                     Then SSH in and run /setup on the target
+#   ./deploy.sh --all                 Deploy all agents
+#   ./deploy.sh --all --code          Core code only (skip .env/personality)
 set -euo pipefail
 
 if ! command -v jq &>/dev/null; then
@@ -32,6 +34,7 @@ CORE_EXCLUDES=(
 deploy_agent() {
   local agent_name="$1"
   local code_only="${2:-false}"
+  local init_mode="${3:-false}"
   local agent_dir="$AGENTS_DIR/$agent_name"
 
   if [[ ! -d "$agent_dir" ]]; then
@@ -55,7 +58,7 @@ deploy_agent() {
 
   if [[ "$host" == "localhost" ]]; then
     echo "  Skipping rsync for localhost agent"
-    if [[ -n "$post_deploy" ]]; then
+    if [[ -n "$post_deploy" && "$init_mode" != "true" ]]; then
       echo "  Running post-deploy locally: $post_deploy"
       (cd "$path" && eval "$post_deploy")
     fi
@@ -77,8 +80,15 @@ deploy_agent() {
       fi
     fi
 
-    # Step 3: Run post-deploy command
-    if [[ -n "$post_deploy" ]]; then
+    # Step 3: Run post-deploy command (skipped in init mode — run /setup on target)
+    if [[ "$init_mode" == "true" ]]; then
+      echo "  Init mode: skipping post-deploy"
+      echo ""
+      echo "  Next steps on the target machine:"
+      echo "    ssh $host"
+      echo "    cd $path"
+      echo "    claude  # then run /setup"
+    elif [[ -n "$post_deploy" ]]; then
       echo "  Running post-deploy: $post_deploy"
       ssh "$host" "cd $(printf '%q' "$path") && $post_deploy"
     fi
@@ -89,6 +99,7 @@ deploy_agent() {
 
 # Parse arguments
 CODE_ONLY=false
+INIT_MODE=false
 DEPLOY_ALL=false
 AGENT_NAME=""
 
@@ -96,6 +107,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --all)  DEPLOY_ALL=true; shift ;;
     --code) CODE_ONLY=true; shift ;;
+    --init) INIT_MODE=true; shift ;;
     -*)     echo "Unknown option: $1" >&2; exit 1 ;;
     *)      AGENT_NAME="$1"; shift ;;
   esac
@@ -111,15 +123,16 @@ if [[ "$DEPLOY_ALL" == "true" ]]; then
   fi
   for agent_dir in "${agents[@]}"; do
     agent=$(basename "$agent_dir")
-    deploy_agent "$agent" "$CODE_ONLY"
+    deploy_agent "$agent" "$CODE_ONLY" "$INIT_MODE"
   done
 elif [[ -n "$AGENT_NAME" ]]; then
-  deploy_agent "$AGENT_NAME" "$CODE_ONLY"
+  deploy_agent "$AGENT_NAME" "$CODE_ONLY" "$INIT_MODE"
 else
   echo "Usage:"
-  echo "  ./deploy.sh <agent-name>       Deploy one agent"
-  echo "  ./deploy.sh --all              Deploy all agents"
-  echo "  ./deploy.sh --all --code       Core code only (skip .env/personality)"
+  echo "  ./deploy.sh <agent-name>          Deploy one agent (sync + build + restart)"
+  echo "  ./deploy.sh <agent-name> --init   First-time: sync only, skip postDeploy"
+  echo "  ./deploy.sh --all                 Deploy all agents"
+  echo "  ./deploy.sh --all --code          Core code only (skip .env/personality)"
   echo ""
   echo "Available agents:"
   agents=("$AGENTS_DIR"/*/)
