@@ -23,6 +23,7 @@ Changes made in this fork that differ from upstream NanoClaw.
 - **Docker runtime fix**: Restored `src/container-runtime.ts` to Docker after apple-container merge overwrote it with Apple Container code (duplicate `CONTAINER_HOST_GATEWAY`/`PROXY_BIND_HOST` declarations). Updated tests to match Docker runtime commands
 - **Diagnostics opt-out**: Permanently opted out of NanoClaw telemetry — replaced diagnostics.md files with opt-out markers, removed diagnostics sections from SKILL.md files
 - **Removed weekly-review planning docs** — deleted implementation plan and design spec from `docs/superpowers/` now that the skill has been implemented and simplified
+- **deploy.sh documentation header**: Captured the multi-agent architecture, deploy flow, and hard-won invariants (overlay `.env` authoritative/no-merge, per-machine `ONECLI_URL`, OneCLI vault for creds, unique Telegram bot per agent, `groups/global/***` include rule) plus subtle pitfalls (show_diff stdin gotcha, rsync include/exclude ordering) at the top of `deploy.sh` for future reference
 
 ## 2026-03-29
 

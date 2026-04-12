@@ -1,12 +1,80 @@
 #!/usr/bin/env bash
-# Deploy NanoClaw agent(s) to target machines
-# Usage:
-#   ./deploy.sh <agent-name>             Deploy one agent (sync + build + restart)
-#   ./deploy.sh <agent-name> --dry-run   Show files that would change + diffs
-#   ./deploy.sh <agent-name> --init      First-time: sync code + overlay, skip postDeploy
-#                                        Then SSH in and run /setup on the target
-#   ./deploy.sh --all                    Deploy all agents
-#   ./deploy.sh --all --code             Core code only (skip .env/personality)
+# ============================================================================
+# NanoClaw multi-agent deploy
+# ============================================================================
+#
+# One codebase, many agents, many machines. Shared core syncs everywhere; each
+# agent supplies its own personality, .env, and credentials via an overlay
+# directory. See docs/multi-agent-plan.md for the design rationale.
+#
+# ── Layout ──────────────────────────────────────────────────────────────────
+#   agents/<name>/agent.json          host, path, postDeploy (tracked in git)
+#   agents/<name>/.env                per-agent .env  (gitignored — secrets)
+#   agents/<name>/groups/global/      shared personality base    (tracked)
+#   agents/<name>/groups/<chat>/      per-chat CLAUDE.md         (tracked)
+#
+# ── How to deploy ───────────────────────────────────────────────────────────
+#   ./deploy.sh <name>               normal: sync + build + restart
+#   ./deploy.sh <name> --dry-run     preview (itemized changes + content diffs)
+#   ./deploy.sh <name> --init        first-time: sync only, skip postDeploy;
+#                                    then SSH in and run /setup on the target
+#   ./deploy.sh --all                all agents
+#   ./deploy.sh --all --code         push core only (skip .env + overlay)
+#
+# First time on a new machine:
+#   1. Add agents/<name>/{agent.json, .env, groups/...}
+#   2. ./deploy.sh <name> --init           (pushes code + overlay)
+#   3. ssh <host>; cd <path>; claude → /setup  (OneCLI vault + systemd unit)
+#   4. ./deploy.sh <name>                  (ongoing deploys from now on)
+#
+# ── Invariants (read before changing anything) ──────────────────────────────
+#
+# 1. The overlay .env is AUTHORITATIVE and overwrites the remote .env on every
+#    deploy. There is no merge. Anything you want on the remote must be in
+#    agents/<name>/.env — including ONECLI_URL. If /setup or /init-onecli on
+#    the remote adds a new key, mirror it back into the overlay or it will be
+#    clobbered on the next deploy.
+#
+# 2. ONECLI_URL is PER-MACHINE and must live in each overlay .env:
+#        macOS localhost  → http://127.0.0.1:10254
+#        Docker on Linux  → http://172.17.0.1:10254   (docker0 bridge)
+#    It cannot be shared across agents.
+#
+# 3. Credentials live in the OneCLI vault on each target, NOT in .env. The
+#    gateway injects them into outbound API calls at request time, so
+#    containers never see raw keys. .env holds only non-secrets: ONECLI_URL,
+#    ASSISTANT_NAME, channel bot tokens, WHISPER_*, PARALLEL_API_KEY.
+#
+# 4. Each agent needs its OWN Telegram bot token. Two processes polling the
+#    same bot will collide on getUpdates (HTTP 409) and one will silently die.
+#    The script does not validate uniqueness — that's on you.
+#
+# 5. groups/ sync rule (CORE_EXCLUDES): sync groups/global/*** (shared base
+#    personality, part of core), exclude groups/* otherwise. This protects
+#    per-chat conversation history and runtime state on remote targets from
+#    being deleted by `rsync --delete` on core-code syncs. If you loosen this,
+#    you will nuke remote history.
+#
+# 6. .claude/settings.local.json is the one file inside .claude/ that is NOT
+#    synced — it holds per-machine permission grants.
+#
+# 7. deploy.sh and FORK_CHANGELOG.md are excluded from rsync so deploying from
+#    A to B never overwrites B's copy of the deploy tooling or fork log.
+#
+# ── Subtleties in this script ───────────────────────────────────────────────
+#
+# • show_diff's SSH must redirect stdin from /dev/null (line ~120), or the
+#   ssh process swallows the enclosing while-read loop's stdin and diffs stop
+#   after the first file. Classic bash pipeline gotcha.
+#
+# • Localhost agents skip rsync entirely (they're already in place) but still
+#   run postDeploy locally via `eval`.
+#
+# • rsync include/exclude order matters: `--include='groups/' --include=
+#   'groups/global/***' --exclude='groups/*'` must appear in that order or
+#   the include gets shadowed.
+#
+# ============================================================================
 set -euo pipefail
 
 if ! command -v jq &>/dev/null; then
