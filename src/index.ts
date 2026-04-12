@@ -8,12 +8,10 @@ import {
   GROUPS_DIR,
   IDLE_TIMEOUT,
   MAX_MESSAGES_PER_PROMPT,
-  ONECLI_URL,
   POLL_INTERVAL,
   TELEGRAM_BOT_POOL,
   TIMEZONE,
 } from './config.js';
-import { OneCLI } from '@onecli-sh/sdk';
 import './channels/index.js';
 import {
   getChannelFactory,
@@ -75,30 +73,6 @@ import { logger } from './logger.js';
 
 // Re-export for backwards compatibility during refactor
 export { escapeXml, formatMessages } from './router.js';
-
-const onecli = new OneCLI({ url: ONECLI_URL });
-
-function ensureOneCLIAgent(jid: string, group: RegisteredGroup): void {
-  const identifier = group.folder.toLowerCase().replace(/_/g, '-');
-  onecli.ensureAgent({ name: group.name, identifier }).then(
-    (created) => {
-      if (created) {
-        logger.info(
-          { jid, group: group.name, identifier },
-          'OneCLI agent ensured',
-        );
-      } else {
-        logger.debug(
-          { jid, group: group.name, identifier },
-          'OneCLI agent ensure skipped',
-        );
-      }
-    },
-    (err) => {
-      logger.debug({ jid, err }, 'OneCLI agent ensure failed (non-critical)');
-    },
-  );
-}
 
 let lastTimestamp = '';
 let sessions: Record<string, string> = {};
@@ -166,9 +140,6 @@ function registerGroup(jid: string, group: RegisteredGroup): void {
 
   registeredGroups[jid] = group;
   setRegisteredGroup(jid, group);
-
-  // Ensure a corresponding OneCLI agent exists (best-effort, non-blocking)
-  ensureOneCLIAgent(jid, group);
 
   // Create group folder
   fs.mkdirSync(path.join(groupDir, 'logs'), { recursive: true });
@@ -654,12 +625,6 @@ async function main(): Promise<void> {
   logger.info('Database initialized');
   loadState();
   restoreRemoteControl();
-
-  // Ensure OneCLI agents exist for all registered groups.
-  // Recovers from missed creates (e.g. OneCLI was down at registration time).
-  for (const [jid, group] of Object.entries(registeredGroups)) {
-    ensureOneCLIAgent(jid, group);
-  }
 
   // Graceful shutdown handlers
   const shutdown = async (signal: string) => {
