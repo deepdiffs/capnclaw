@@ -24,7 +24,7 @@ CORE_EXCLUDES=(
   --exclude='dist/'
   --exclude='.env'
   --exclude='.git/'
-  --exclude='.claude/'
+  --exclude='.claude/settings.local.json'
   --exclude='.DS_Store'
   --exclude='.nanoclaw/'
 )
