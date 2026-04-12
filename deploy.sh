@@ -33,6 +33,7 @@ CORE_EXCLUDES=(
   --exclude='.env'
   --exclude='.git/'
   --exclude='deploy.sh'
+  --exclude='FORK_CHANGELOG.md'
   --exclude='.claude/settings.local.json'
   --exclude='.DS_Store'
   --exclude='.nanoclaw/'
