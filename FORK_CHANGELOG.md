@@ -2,6 +2,12 @@
 
 Changes made in this fork that differ from upstream NanoClaw.
 
+## 2026-04-13
+
+### Changed
+- **Disabled WebSearch tool in agent runner**: Added `disallowedTools: ['WebSearch']` to the Claude Agent SDK query options in `container/agent-runner/src/index.ts`. Agents should reach for Parallel AI search MCP instead, which is routed through OneCLI and returns structured results
+- **Tightened Telegram formatting guidance in `groups/telegram_main/CLAUDE.md`**: Replaced the verbose MTProto `messageEntity*` TL schema dump with a short, actionable rule — use plain Telegram Markdown (not MarkdownV2), do NOT escape `.` `-` `!` `(` `)` `_` with backslashes. The old schema reference was confusing the model into emitting MarkdownV2-style escapes that rendered as literal `\` in chat
+
 ## 2026-04-12
 
 ### Added

@@ -554,6 +554,9 @@ async function runQuery(
         'mcp__parallel-task__*',
         'mcp__qmd__*',
       ],
+      disallowedTools: [
+        'WebSearch',
+      ],
       env: sdkEnv,
       permissionMode: 'bypassPermissions',
       allowDangerouslySkipPermissions: true,
