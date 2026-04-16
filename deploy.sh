@@ -61,6 +61,14 @@
 # 7. deploy.sh and FORK_CHANGELOG.md are excluded from rsync so deploying from
 #    A to B never overwrites B's copy of the deploy tooling or fork log.
 #
+# 8. If agent.json has a `qmd` block, deploy.sh writes it verbatim as
+#    `<path>/.qmd-sync.json` on the target and installs a launchd (macOS) or
+#    systemd --user (linux) unit that runs scripts/qmd/sync-to-studio.sh
+#    every `intervalSeconds`. The sync pushes the listed source paths to
+#    the centralized qmd host on the studio over SSH; a watcher there
+#    re-embeds the per-agent collection on change. See scripts/qmd/README.md
+#    for the studio-side setup and the expected agent.json schema.
+#
 # ── Subtleties in this script ───────────────────────────────────────────────
 #
 # • show_diff's SSH must redirect stdin from /dev/null (line ~120), or the
@@ -100,6 +108,7 @@ CORE_EXCLUDES=(
   --exclude='dist/'
   --exclude='.env'
   --exclude='.git/'
+  --exclude='.qmd-sync.json'
   --exclude='deploy.sh'
   --exclude='FORK_CHANGELOG.md'
   --exclude='.claude/settings.local.json'
@@ -191,6 +200,39 @@ show_diff() {
   done <<< "$changes"
 }
 
+# Install the qmd push-sync unit on the target.
+# Writes .qmd-sync.json (the qmd block from agent.json, verbatim) to the
+# target and runs scripts/qmd/install-agent-sync.sh there. Idempotent:
+# re-running replaces the launchd/systemd unit and reloads it.
+install_qmd_sync() {
+  local config="$1"  # path to agents/<name>/agent.json
+  local host="$2"    # "localhost" or ssh spec
+  local path="$3"    # nanoclaw root on the target
+
+  local qmd_block
+  qmd_block=$(jq -c '.qmd // empty' "$config")
+  if [[ -z "$qmd_block" || "$qmd_block" == "null" ]]; then
+    return 0
+  fi
+
+  local interval
+  interval=$(jq -r '.qmd.intervalSeconds // 300' "$config")
+
+  local tmp
+  tmp=$(mktemp -t qmd-sync.XXXXXX)
+  printf '%s\n' "$qmd_block" > "$tmp"
+
+  echo "  Configuring qmd sync..."
+  if [[ "$host" == "localhost" ]]; then
+    install -m 644 "$tmp" "$path/.qmd-sync.json"
+    bash "$path/scripts/qmd/install-agent-sync.sh" "$path" "$interval"
+  else
+    rsync -az "$tmp" "$host:$path/.qmd-sync.json"
+    ssh "$host" "bash $(printf '%q' "$path/scripts/qmd/install-agent-sync.sh") $(printf '%q' "$path") $(printf '%q' "$interval")"
+  fi
+  rm -f "$tmp"
+}
+
 deploy_agent() {
   local agent_name="$1"
   local code_only="${2:-false}"
@@ -236,6 +278,7 @@ deploy_agent() {
 
   if [[ "$host" == "localhost" ]]; then
     echo "  Skipping rsync for localhost agent"
+    install_qmd_sync "$config" "$host" "$path"
     if [[ -n "$post_deploy" && "$init_mode" != "true" ]]; then
       echo "  Running post-deploy locally: $post_deploy"
       (cd "$path" && eval "$post_deploy")
@@ -258,7 +301,10 @@ deploy_agent() {
       fi
     fi
 
-    # Step 3: Run post-deploy command (skipped in init mode — run /setup on target)
+    # Step 3: Install qmd push-sync unit if agent.json has a qmd block
+    install_qmd_sync "$config" "$host" "$path"
+
+    # Step 4: Run post-deploy command (skipped in init mode — run /setup on target)
     if [[ "$init_mode" == "true" ]]; then
       echo "  Init mode: skipping post-deploy"
       echo ""

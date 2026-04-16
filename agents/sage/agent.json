@@ -2,5 +2,19 @@
   "name": "sage",
   "host": "user@sage-host",
   "path": "/home/user/nanoclaw",
-  "postDeploy": "npm run deploy"
+  "postDeploy": "npm run deploy",
+  "qmd": {
+    "collection": "sage",
+    "sources": [
+      "groups/telegram_main/conversations",
+      "groups/telegram_main/docs",
+      "groups/telegram_main/CLAUDE.md"
+    ],
+    "intervalSeconds": 300,
+    "studio": {
+      "host": "studio.raptor-tilapia.ts.net",
+      "user": "j",
+      "root": "/var/qmd/sources"
+    }
+  }
 }

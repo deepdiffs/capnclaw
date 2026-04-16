@@ -2,6 +2,14 @@
 
 Changes made in this fork that differ from upstream NanoClaw.
 
+## 2026-04-14
+
+### Added
+- **Automatic qmd push-sync from each agent to the centralized studio**: Each `agents/<name>/agent.json` now takes an optional `qmd` block (`collection`, `sources`, `intervalSeconds`, `studio: {host,user,root}`). When present, `deploy.sh` writes the block verbatim as `<path>/.qmd-sync.json` on the target and runs `scripts/qmd/install-agent-sync.sh` to install a launchd agent (macOS) or `systemd --user` timer (linux) that invokes `scripts/qmd/sync-to-studio.sh` every `intervalSeconds`. The sync is a plain rsync-over-SSH push of the listed source paths (conversations, docs, CLAUDE.md) into `/var/qmd/sources/<collection>/` on `studio.raptor-tilapia.ts.net`. Idempotent — re-running deploy replaces and reloads the unit. Adding a new agent is now just `agent.json` + `deploy.sh`. Wired `qmd` blocks into `capn`, `miniclaw`, and `sage` (each targeting a collection named after the agent)
+- **Studio-side qmd watcher (`scripts/qmd/studio-watcher.sh`)**: Runs on the Mac Studio, uses `fswatch -r` on `/var/qmd/sources/`, derives the collection from the first path segment under that root, debounces rapid events (default 10s coalesce window) into one re-embed per collection, then calls `qmd collection add <name> --path <dir>` + `qmd embed <name>`. CLI commands are parameterized via `QMD_ADD_CMD` / `QMD_EMBED_CMD` env vars so different qmd versions can plug in without editing the script. Ships with a launchd plist template in `scripts/qmd/README.md` for the studio operator to install once
+- **`scripts/qmd/README.md`**: Architecture diagram, agent.json schema example, one-time studio setup steps (fswatch/jq install, sources-root permissions, Tailscale SSH, launchd plist, end-to-end verification), and uninstall instructions
+- **deploy.sh `install_qmd_sync` helper**: Reads `.qmd` from agent.json via `jq`, generates the on-target config from a `mktemp` scratch file, routes to `install -m 644` locally or `rsync` + `ssh` remotely. Called from both the localhost and remote branches of `deploy_agent` after overlay sync and before postDeploy. Added `--exclude='.qmd-sync.json'` to `CORE_EXCLUDES` so a dev-machine copy can never get pushed as code, and added `.qmd-sync.json` to `.gitignore`. Added invariant #8 to the header comment documenting the qmd sync layer
+
 ## 2026-04-13
 
 ### Changed

@@ -22,6 +22,9 @@ groups/global/*
 *.keys.json
 .env
 
+# Generated on target hosts by deploy.sh (qmd push-sync config)
+.qmd-sync.json
+
 # Agent overlays - track everything except secrets
 agents/*/.env
 
