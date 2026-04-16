@@ -41,17 +41,20 @@ fi
 SSH_SPEC="${STUDIO_USER:+${STUDIO_USER}@}${STUDIO_HOST}"
 DEST="${SSH_SPEC}:${STUDIO_ROOT}/${COLLECTION}/"
 
-# Collect source paths. Each entry is a path relative to $ROOT. We use
-# rsync --relative with a "/./" anchor so the path structure is preserved
-# under the destination (e.g. groups/telegram_main/conversations/foo.md).
+# Collect source paths. Each entry is a path relative to $ROOT.
+# We cd into ROOT and pass relative paths with rsync -R so the tree
+# structure is preserved under the destination without leaking the
+# absolute path of the agent host.
+cd "$ROOT"
+
 args=()
 while IFS= read -r src; do
   [[ -z "$src" ]] && continue
-  if [[ ! -e "$ROOT/$src" ]]; then
+  if [[ ! -e "$src" ]]; then
     echo "qmd-sync: skip $src (not present on this host)"
     continue
   fi
-  args+=("$ROOT/./$src")
+  args+=("$src")
 done < <(jq -r '.sources[]?' "$CONFIG")
 
 if [[ ${#args[@]} -eq 0 ]]; then
@@ -60,12 +63,12 @@ if [[ ${#args[@]} -eq 0 ]]; then
 fi
 
 # Ensure remote collection directory exists (mkdir -p is a no-op if present).
-ssh -o BatchMode=yes -o ConnectTimeout=10 "$SSH_SPEC" \
+ssh -o ConnectTimeout=10 "$SSH_SPEC" \
   "mkdir -p $(printf '%q' "${STUDIO_ROOT}/${COLLECTION}")"
 
 echo "qmd-sync: pushing collection '$COLLECTION' → $DEST"
-# --relative preserves path structure under the destination.
+# -R (--relative) preserves path structure under the destination.
 # No --delete: accidental deletion of indexed content is worse than staleness;
 # run `qmd` manually on the studio if you need to prune.
-rsync -az --relative "${args[@]}" "$DEST"
+rsync -azR "${args[@]}" "$DEST"
 echo "qmd-sync: done"

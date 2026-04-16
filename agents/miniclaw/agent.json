@@ -13,7 +13,7 @@
     "intervalSeconds": 300,
     "studio": {
       "host": "studio.raptor-tilapia.ts.net",
-      "user": "j",
+      "user": "jj",
       "root": "/var/qmd/sources"
     }
   }

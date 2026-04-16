@@ -10,6 +10,11 @@ Changes made in this fork that differ from upstream NanoClaw.
 - **`scripts/qmd/README.md`**: Architecture diagram, agent.json schema example, one-time studio setup steps (fswatch/jq install, sources-root permissions, Tailscale SSH, launchd plist, end-to-end verification), and uninstall instructions
 - **deploy.sh `install_qmd_sync` helper**: Reads `.qmd` from agent.json via `jq`, generates the on-target config from a `mktemp` scratch file, routes to `install -m 644` locally or `rsync` + `ssh` remotely. Called from both the localhost and remote branches of `deploy_agent` after overlay sync and before postDeploy. Added `--exclude='.qmd-sync.json'` to `CORE_EXCLUDES` so a dev-machine copy can never get pushed as code, and added `.qmd-sync.json` to `.gitignore`. Added invariant #8 to the header comment documenting the qmd sync layer
 
+### Fixed
+- **qmd sync SSH user**: Changed `studio.user` from `"j"` to `"jj"` in all three agent overlays to match the Mac Studio's actual username
+- **rsync leaking absolute paths**: `sync-to-studio.sh` used `--relative` with a `$ROOT/./$src` anchor that macOS rsync resolved away, causing the full absolute path (e.g. `/Users/j/workspace/...`) to appear on the studio. Fixed by `cd`-ing into `$ROOT` and passing plain relative paths with `rsync -azR`
+- **qmd `collection add` path resolution**: `studio-watcher.sh` passed `--path $src` but qmd resolves collection paths relative to cwd. Changed to `cd $SOURCES_ROOT && qmd collection add $collection` so the collection maps to `$SOURCES_ROOT/$collection`
+
 ## 2026-04-13
 
 ### Changed

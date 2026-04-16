@@ -80,7 +80,9 @@ while sleep "$DEBOUNCE_SECONDS"; do
     log "reindexing $collection"
     # Best-effort: ensure collection exists, then embed. Errors are logged
     # but do not stop the loop — we'd rather miss one reindex than exit.
-    if ! $ADD_CMD "$collection" --path "$src" >/dev/null 2>&1; then
+    # qmd resolves collection paths relative to cwd, so we cd into the
+    # sources root so `qmd collection add capn` maps to $SOURCES_ROOT/capn.
+    if ! (cd "$SOURCES_ROOT" && $ADD_CMD "$collection") >/dev/null 2>&1; then
       # add may fail if the collection already exists — that's fine.
       :
     fi
